@@ -5,10 +5,9 @@
 * Spatial Statistics
 
 ## Education
-* M.S.									2019 –
-Department of Geography, Kyung Hee University, Seoul, South Korea
-* B.S.									2013 – 2018
-Department of Geography, Kyung Hee University, Seoul, South Korea
+* M.S.	Department of Geography, Kyung Hee University, Seoul, South Korea [2019 - ]
+* B.S.	Department of Geography, Kyung Hee University, Seoul, South Korea [2013 – 2018]
+
 
 ## Peer-reviewed Journal Articles
 1. Lee, Y., __Lee, Y.__, Seong, J. Stanescu, A., Ji, S., & Hwang, C. S. (2020). An Analysis of the latest Trends and Topics in Geography Research Using Topic Modeling. Journal of the Korean Geographical Society, 55(6), 589-599.
