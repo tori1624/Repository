@@ -26,7 +26,7 @@ Department of Geography, Kyung Hee University, Seoul, South Korea
 
 ## Professional Experience
 ```bash
-Research Assistant, Kyung Hee University, Geospatial Big Data Lab [May.2017 – Feb.2021]
+### Research Assistant, Kyung Hee University, Geospatial Big Data Lab [May.2017 – Feb.2021]
 1.	계층별 거주지 분리의 사회경제적 영향에 관한 연구: 주택가격와 행복지수의 탐색 (sponsored by National Research Foundation of Korea) [Sep.2020 – Feb.2021]
 2.	Effects and solutions of backward locking for spatial data imputation using a deep learning based approach (sponsored by National Research Foundation of Korea) [Sep.2020 – Feb.2021]
 3.	Analysis for Research Trend in Conference: Development of Generic Platform with Semantic Network Analysis and Big Data Analysis (sponsored by Institute for Information & Communications Technology Planning & Evaluation) [Jul.2019 – Jun.2020]
@@ -38,7 +38,7 @@ Research Assistant, Kyung Hee University, Geospatial Big Data Lab [May.2017 – 
 ```
 
 ```bash
-Teaching Assistant, Kyung Hee University, Department of Geography [Mar.2018 – Jul.2019]
+### Teaching Assistant, Kyung Hee University, Department of Geography [Mar.2018 – Jul.2019]
 1.	2019 UWG (University of West Georgia) Geospatial Workshop Program [Jul. 2019]
 2.	Raster GIS and Remote Sensing [Mar. 2019 – Jun. 2019]
 3.	The Understanding of Spatiotemporal Big Data [Mar. 2018 – Jun. 2018]
