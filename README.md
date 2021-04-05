@@ -11,21 +11,16 @@ Department of Geography, Kyung Hee University, Seoul, South Korea
 Department of Geography, Kyung Hee University, Seoul, South Korea
 
 ## Peer-reviewed Journal Articles
-```bash
 1.	__Lee, Y.__, Lee, Y., Seong, J. Stanescu, A., & Hwang, C. S. (2020). A Comparison of Network Clustering Algorithms in Keyword Network Analysis: A Case Study with Geography Conference Presentations. International Journal of Geospatial and Environmental Research, 7(3), 1.
 2.	Lee, Y., __Lee, Y.__, Seong, J. Stanescu, A., Hwang, T., & Hwang, C. S. (2019). Analysis of GIS Research Trends in the U.S. with AAG Conference Presentations from 2000-2019. The Geographical Journal of Korea, 53(4), 495-508.
-3.	<b>Lee, Y.</b>, & Hong, S.-Y. (2019). A machine learning approach to the prediction of individual travel mode choices. Journal of the Korean Data & Information Science Society, 30(5), 1011-1024.
-4.	Oh, J., <b>Lee, Y.</b>, Jeong, Y., & Hong, S.-Y. (2019). An analysis of the National Household Travel Survey data for exploring spatial segregation of income groups. Journal of Transport Research, 26(1), 17-29.
-```
+3.	__Lee, Y.__, & Hong, S.-Y. (2019). A machine learning approach to the prediction of individual travel mode choices. Journal of the Korean Data & Information Science Society, 30(5), 1011-1024.
+4.	Oh, J., __Lee, Y.__, Jeong, Y., & Hong, S.-Y. (2019). An analysis of the National Household Travel Survey data for exploring spatial segregation of income groups. Journal of Transport Research, 26(1), 17-29.
 
 ## Proceedings and Posters of Conference
-```bash
-1.	<b>Lee, Y.</b>, Lee, Y., Stanescu, A., & Seong, J. (2019). Summarizing the 2019 AAG conference presentations using keyword network analysis. In: The 74th Annual Meeting of the Southeastern Division of the American Association of Geographers (SEDAAG 2019). Wilmington, NC. (Poster)
-2.	Choi, C., Kim, Y., <b>Lee, Y.</b>, & Hong, S.-Y. (2018). Evaluating efficiency of spatial analysis in cloud computing platforms. In 10th International Conference on Geographic Information Science (GIScience 2018). Melbourne, Australia.
-```
+1.	__Lee, Y.__, Lee, Y., Stanescu, A., & Seong, J. (2019). Summarizing the 2019 AAG conference presentations using keyword network analysis. In: The 74th Annual Meeting of the Southeastern Division of the American Association of Geographers (SEDAAG 2019). Wilmington, NC. (Poster)
+2.	Choi, C., Kim, Y., __Lee, Y.__, & Hong, S.-Y. (2018). Evaluating efficiency of spatial analysis in cloud computing platforms. In 10th International Conference on Geographic Information Science (GIScience 2018). Melbourne, Australia.
 
 ## Professional Experience
-```bash
 ### Research Assistant, Kyung Hee University, Geospatial Big Data Lab [May.2017 – Feb.2021]
 1.	계층별 거주지 분리의 사회경제적 영향에 관한 연구: 주택가격와 행복지수의 탐색 (sponsored by National Research Foundation of Korea) [Sep.2020 – Feb.2021]
 2.	Effects and solutions of backward locking for spatial data imputation using a deep learning based approach (sponsored by National Research Foundation of Korea) [Sep.2020 – Feb.2021]
@@ -35,17 +30,13 @@ Department of Geography, Kyung Hee University, Seoul, South Korea
 6.	융합데이터를 활용한 활동공간정보 구축과 분리측도 개발 (sponsored by National Research Foundation of Korea) [Mar.2018 – Feb.2019]
 7.	대중교통 서비스 형평성 진단을 위한 소득취약계층 공간분포 및 활동범위 분석 (sponsored by The Korea Transport Institute) [Jul.2017 – Sep.2017]
 8.	동질적 통계 공표구역 획정을 위한 최적화 방안 연구 (sponsored by Statistics Korea) [May.2017 – Feb.2018]
-```
 
-```bash
 ### Teaching Assistant, Kyung Hee University, Department of Geography [Mar.2018 – Jul.2019]
 1.	2019 UWG (University of West Georgia) Geospatial Workshop Program [Jul. 2019]
 2.	Raster GIS and Remote Sensing [Mar. 2019 – Jun. 2019]
 3.	The Understanding of Spatiotemporal Big Data [Mar. 2018 – Jun. 2018]
- ```
  
 ## Awards
-```bash
 1.	1st place in Poster Presentation Competition from Korean Geographical Society		      2018
 : 서울시 무더위 쉼터와 그늘막의 입지 적절성 평가 및 입지 제언
 2.	2nd place in 2018 Public Big Data Analysis Contest (analysis session)
@@ -56,4 +47,3 @@ Department of Geography, Kyung Hee University, Seoul, South Korea
 : Measuring spatial segregation by income level based on place using transport bigdata
 5.	3rd place in Poster Presentation Competition from Korean Geographical Society		      2016
 : Image analysis of the recommended rail-ro attractions with word clould
- ```
