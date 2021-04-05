@@ -37,13 +37,10 @@
 3.	The Understanding of Spatiotemporal Big Data [Mar. 2018 – Jun. 2018]
  
 ## Awards
-1.	1st place in Poster Presentation Competition from Korean Geographical Society		      2018
-: 서울시 무더위 쉼터와 그늘막의 입지 적절성 평가 및 입지 제언
-2.	2nd place in 2018 Public Big Data Analysis Contest (analysis session)
-: 서울시 무더위 쉼터 입지 적절성 평가, 입지 제언 & 그늘막 활용 방안 제시
-3.	3rd place in 2018 Public Big Data Analysis Contest (visualization session)
-: 전국 쓰레기 발생 및 처리 시각화
-4.	우수상, 교통 빅데이터 활용 우수논문 및 아이디어 공모전 (논문 분야)
-: Measuring spatial segregation by income level based on place using transport bigdata
-5.	3rd place in Poster Presentation Competition from Korean Geographical Society		      2016
-: Image analysis of the recommended rail-ro attractions with word clould
+### [2018]
+1.	1st place in Poster Presentation Competition from Korean Geographical Society	: 서울시 무더위 쉼터와 그늘막의 입지 적절성 평가 및 입지 제언
+2.	2nd place in 2018 Public Big Data Analysis Contest (analysis session) : 서울시 무더위 쉼터 입지 적절성 평가, 입지 제언 & 그늘막 활용 방안 제시
+3.	3rd place in 2018 Public Big Data Analysis Contest (visualization session) : 전국 쓰레기 발생 및 처리 시각화
+4.	우수상, 교통 빅데이터 활용 우수논문 및 아이디어 공모전 (논문 분야) : Measuring spatial segregation by income level based on place using transport bigdata
+### [2016]
+5.	3rd place in Poster Presentation Competition from Korean Geographical Society	: Image analysis of the recommended rail-ro attractions with word clould
