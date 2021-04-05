@@ -1,0 +1,731 @@
+---
+title: "Movie"
+author: "Young Ho Lee"
+date: "2017년 8월 22일"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Basic Packages
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(stringr)
+library(gridExtra)
+library(xgboost)
+
+Sys.setenv(R_ZIPCMD= "C:/Rtools/bin/zip")
+library(openxlsx)
+
+options("scipen" = 100)
+
+#setwd
+knitr::opts_knit$set(root.dir = "D:/Data/contest/movie/movie_refined/")
+```
+
+# 1. Data Import
+```{r}
+list.files()
+movie.flist.xlsx <- list.files()
+fname.list <- substr(movie.flist.xlsx, 1, nchar(movie.flist.xlsx)-5)
+# week.flist
+
+for(i in 1:length(fname.list)){
+  tmp.xlsx <- read.xlsx(paste0("movie_", i, ".xlsx"))
+  names(tmp.xlsx)[5] <- "매출액점유율"
+  tmp.xlsx <- tmp.xlsx %>%
+    mutate(week = week.flist[i])
+  assign(paste0("movie_", i), tmp.xlsx)
+  message("[", paste0("movie_", i), "] has completed")
+}
+```
+
+## 1) Merge Data
+```{r}
+movie_all <- NULL
+for(i in 1:length(fname.list)){
+  tmp <- get(paste0("movie_", i))
+  movie_all <- rbind(movie_all, tmp)
+}
+
+movie_all <- movie_all %>%
+  rename(rank = 순위,
+         movie_name = 영화명,
+         open_date = 개봉일,
+         sales = 매출액, 
+         sales_rate = 매출액점유율,
+         total_sales = 누적매출액,
+         attendance = 관객수,
+         total_attendance = 누적관객수,
+         screen = 스크린수,
+         showing_frequency = 상영횟수,
+         typical_nationality = 대표국적,
+         nationality = 국적,
+         production_company = 제작사,
+         distributor = 배급사,
+         grade = 등급,
+         genre = 장르,
+         director = 감독,
+         actor_actress = 배우)
+```
+
+## 2) Split Data
+```{r}
+movie_sum <- movie_all %>%
+  filter(rank == '합계') %>%
+  select(rank, sales, total_sales, attendance, total_attendance, 
+         screen, showing_frequency, week)
+
+# setwd("D:/Data/contest/movie/")
+# write.xlsx(movie_sum, "movie_sum.xlsx", row.names = FALSE)
+
+movie_data <- movie_all %>%
+  filter(rank != '합계')
+
+movie_data$rank <- as.numeric(movie_data$rank)
+movie_data$open_date <- as.numeric(movie_data$open_date)
+
+# write.xlsx(movie_data, "movie_data.xlsx", row.names = FALSE)
+```
+
+## 3) Refined Data Import
+```{r}
+movie_data <- read.xlsx("D:/Data/contest/movie/movie_data_1.xlsx")
+movie_sum <- read.xlsx("D:/Data/contest/movie/movie_sum.xlsx")
+
+str(movie_data)
+summary(movie_data)
+```
+
+# 2. Data Exploration
+## 1) Column Explanaion
+```{r}
+names(movie_data)
+unique(movie_data$typical_nationality)
+# unique(movie_data$nationality)
+unique(movie_data$grade)
+unique(movie_data$genre)
+# unique(movie_data$production_company)
+```
+
+## 2) Visualization
+### 2-1) First Rank
+```{r}
+movie_data %>%
+  filter(rank == 1) %>%
+  group_by(movie_name) %>%
+  summarise(count = n()) %>%
+  filter(count >= 2) %>%
+  ggplot(aes(x = movie_name, y = count, fill = movie_name)) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+### 2-2) Grade
+```{r}
+movie_data %>%
+  group_by(grade) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = grade, y = count, fill = grade)) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+### 2-3) Sales
+```{r}
+movie_data %>%
+  ggplot(aes(x = log(sales), y = log(total_attendance), color = sales)) +
+  geom_point(shape = 21) + geom_line() -> g1
+
+movie_data %>%
+  ggplot(aes(x = sales_rate, y = log(total_attendance), color = sales_rate)) +
+  geom_point(shape = 21) + geom_line() -> g2
+
+grid.arrange(g1, g2, nrow = 2)
+```
+
+```{r}
+movie_data %>%
+  ggplot(aes(x = log(total_sales), y = log(total_attendance), color = total_sales)) +
+  geom_point(shape = 21) + geom_line()
+```
+
+### 2-4) Screen / Showing Frequency
+```{r}
+movie_data %>%
+  ggplot(aes(x = screen, y = log(total_attendance), color = screen)) +
+  geom_point(shape = 21) + geom_line() -> g1
+
+movie_data %>%
+  ggplot(aes(x = showing_frequency, y = log(total_attendance), color = showing_frequency)) +
+  geom_point(shape = 21) + geom_line() -> g2
+
+grid.arrange(g1, g2, nrow = 2)
+```
+
+### 2-6) Typicial Nationality
+```{r}
+movie_data %>%
+  group_by(typical_nationality) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = typical_nationality, y = count, fill = typical_nationality)) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 60, face = "italic", vjust = 1, hjust = 1))
+```
+
+```{r}
+movie_data %>%
+  group_by(typical_nationality) %>%
+  summarise(count = n(), avg_total_attendance = mean(total_attendance)) %>%
+  filter(count >= 200) %>%
+  ggplot(aes(x = typical_nationality, y = avg_total_attendance, fill = typical_nationality)) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+# 3. Data Handling
+## 1) Grade
+```{r}
+grade.list <- unique(movie_data$grade)
+
+# grade.list[c(1, 6, 7, 8, 14, 21, 24, 29, 41)]
+# grade.list[c(2, 9, 16, 18, 20, 23, 25, 26, 35, 37, 39, 45)]
+# grade.list[c(3, 15, 22, 27, 30, 42, 43, 46)]
+# grade.list[c(4, 11, 12, 13, 17, 19, 28, 31, 32, 33, 34, 36, 38, 44, 47)]
+
+movie_data[which(movie_data$grade ==  grade.list[1] | movie_data$grade == grade.list[6] | movie_data$grade ==  grade.list[7] | movie_data$grade ==  grade.list[8] | movie_data$grade ==  grade.list[14] | movie_data$grade ==  grade.list[21] | movie_data$grade ==  grade.list[24] | movie_data$grade ==  grade.list[29] | movie_data$grade ==  grade.list[41]), "grade"] <- "12세이상관람가"
+
+movie_data[which(movie_data$grade ==  grade.list[2] | movie_data$grade == grade.list[9] | movie_data$grade ==  grade.list[16] | movie_data$grade ==  grade.list[18] | movie_data$grade ==  grade.list[20] | movie_data$grade ==  grade.list[23] | movie_data$grade ==  grade.list[25] | movie_data$grade ==  grade.list[26] | movie_data$grade ==  grade.list[35] | movie_data$grade ==  grade.list[37] | movie_data$grade ==  grade.list[39] | movie_data$grade ==  grade.list[45]), "grade"] <- "15세이상관람가"
+
+movie_data[which(movie_data$grade ==  grade.list[3] | movie_data$grade == grade.list[15] | movie_data$grade ==  grade.list[22] | movie_data$grade ==  grade.list[27] | movie_data$grade ==  grade.list[30] | movie_data$grade ==  grade.list[42] | movie_data$grade ==  grade.list[43] | movie_data$grade ==  grade.list[46]), "grade"] <- "전체관람가"
+
+movie_data[which(movie_data$grade ==  grade.list[4] | movie_data$grade == grade.list[11] | movie_data$grade ==  grade.list[12] | movie_data$grade ==  grade.list[13] | movie_data$grade ==  grade.list[17] | movie_data$grade ==  grade.list[19] | movie_data$grade ==  grade.list[28] | movie_data$grade ==  grade.list[31] | movie_data$grade ==  grade.list[32] | movie_data$grade ==  grade.list[33] | movie_data$grade ==  grade.list[34] | movie_data$grade ==  grade.list[36] | movie_data$grade ==  grade.list[38] | movie_data$grade ==  grade.list[44] | movie_data$grade ==  grade.list[47]), "grade"] <- "청소년관람불가"
+
+movie_data[which(is.na(movie_data$grade) | movie_data$grade == grade.list[10] | movie_data$grade ==  grade.list[40]), "grade"] <- "미정"
+
+movie_data$grade <- as.factor(movie_data$grade)
+```
+
+### 1-1) Grade_count
+```{r}
+movie_data %>%
+  group_by(grade) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x = grade, y = count, fill = grade)) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+### 1-2) Grade_Total Attendance
+```{r}
+movie_data %>%
+  group_by(grade) %>%
+  summarise(avg_total_attendance = mean(total_attendance)) %>%
+  ggplot(aes(x = grade, y = avg_total_attendance, fill = grade)) +
+  geom_col()
+```
+
+```{r}
+movie_data %>%
+  ggplot(aes(x = grade, y = log(total_attendance), fill = grade)) +
+  geom_jitter(color = 'grey', alpha = .2) +
+  geom_violin(alpha = .7)
+```
+
+
+## 2) Genre
+```{r}
+split_genre <- function(x){
+  strsplit(x, split = ',')[[1]][1]
+}
+
+movie_data$genre <- sapply(movie_data$genre, split_genre)
+
+movie_data[which(is.na(movie_data$genre)), "genre"] <- "기타"
+
+movie_data$genre <- as.factor(movie_data$genre)
+```
+
+### 2-1) Genre_Total Attendance
+```{r}
+movie_data %>%
+  group_by(genre) %>%
+  summarise(avg_total_attendance = mean(total_attendance)) %>%
+  ggplot(aes(x = genre, y = avg_total_attendance, fill = genre)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+```{r}
+movie_data %>%
+  ggplot(aes(x = genre, y = log(total_attendance), fill = genre)) +
+  geom_jitter(color = 'grey', alpha = .2) +
+  geom_violin(alpha = .7) + 
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+
+## 3) Production Company
+```{r}
+movie_data %>%
+  group_by(production_company) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+movie_data[which(is.na(movie_data$production_company)), "production_company"] <- "제작사 없음"
+```
+
+### 3-1) Production Company_Total Attendance
+```{r}
+movie_data %>%
+  group_by(production_company) %>%
+  summarise(count = n(), avg_total_attendance = mean(total_attendance)) %>%
+  filter(count >= 50) %>%
+  ggplot(aes(x = production_company, y = avg_total_attendance, fill = production_company)) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+
+## 4) Distributor
+```{r}
+movie_data %>%
+  group_by(distributor) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+movie_data[which(is.na(movie_data$distributor)), "distributor"] <- "배급사 없음"
+```
+
+### 4-1) Distritor_Total Attendance
+```{r}
+movie_data %>%
+  group_by(distributor) %>%
+  summarise(count = n(), avg_total_attendance = mean(total_attendance)) %>%
+  filter(count >= 250) %>%
+  ggplot(aes(x = distributor, y = avg_total_attendance, fill = distributor)) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+## 5) Director
+```{r}
+movie_data %>%
+  group_by(director) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+movie_data[which(is.na(movie_data$director)), "director"] <- "감독 없음"
+```
+
+### 5-1) Director_Total Attendance
+```{r}
+movie_data %>%
+  group_by(director) %>%
+  summarise(count = n(), avg_total_attendance = mean(total_attendance)) %>%
+  filter(count >= 40) %>%
+  ggplot(aes(x = director, y = avg_total_attendance, fill = director)) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+## 6) Actor / Actress
+```{r}
+movie_data %>%
+  group_by(actor_actress) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+movie_data[which(movie_data$genre == "애니메이션"), "actor_actress"] <- "애니메이션"
+movie_data[which(is.na(movie_data$actor_actress)), "actor_actress"] <- "배우 없음"
+```
+
+## 7) Open Date
+```{r}
+split_year <- function(x){
+  strsplit(x, split = '-')[[1]][1]
+}
+
+split_month <- function(x){
+  strsplit(x, split = '-')[[1]][2]
+}
+
+split_day <- function(x){
+  strsplit(x, split = '-')[[1]][3]
+}
+
+movie_data$open_year <- sapply(movie_data$open_date, split_year)
+movie_data$open_month <- sapply(movie_data$open_date, split_month)
+movie_data$open_day <- sapply(movie_data$open_date, split_day)
+
+movie_data$open_year <- as.numeric(movie_data$open_year)
+movie_data$open_month <- as.numeric(movie_data$open_month)
+movie_data$open_day <- as.numeric(movie_data$open_day)
+```
+
+### 7-1) Year
+```{r}
+movie_data %>%
+  group_by(open_year) %>%
+  summarise(avg_total_attendance = mean(total_attendance)) %>%
+  ggplot(aes(x = factor(open_year), y = avg_total_attendance, fill = factor(open_year))) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+```{r}
+movie_data %>%
+  mutate(open_year = factor(open_year)) %>%
+  ggplot(aes(x = open_year, y = log(total_attendance), fill = open_year)) +
+  geom_boxplot() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+
+### 7-2) Month
+```{r}
+movie_data %>%
+  group_by(open_month) %>%
+  summarise(avg_total_attendance = mean(total_attendance)) %>%
+  ggplot(aes(x = factor(open_month), y = avg_total_attendance, fill = factor(open_month))) +
+  geom_col()
+```
+
+```{r}
+movie_data %>%
+  mutate(open_month = factor(open_month)) %>%
+  ggplot(aes(x = open_month, y = log(total_attendance), fill = open_month)) +
+  geom_boxplot() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+
+### 7-3) Day
+```{r}
+movie_data %>%
+  group_by(open_day) %>%
+  summarise(avg_total_attendance = mean(total_attendance)) %>%
+  ggplot(aes(x = factor(open_day), y = avg_total_attendance, fill = factor(open_day))) +
+  geom_col() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+```{r}
+movie_data %>%
+  mutate(open_day = factor(open_day)) %>%
+  ggplot(aes(x = open_day, y = log(total_attendance), fill = open_day)) +
+  geom_boxplot() + theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle = 45, face = "italic", vjust = 1, hjust = 1))
+```
+
+## 8) Week
+```{r}
+movie_data$week_year <- sapply(movie_data$week, split_year)
+movie_data$week_month <- sapply(movie_data$week, split_month)
+movie_data$week_day <- sapply(movie_data$week, split_day)
+
+movie_data$week_year <- as.numeric(movie_data$week_year)
+movie_data$week_month <- as.numeric(movie_data$week_month)
+movie_data$week_day <- as.numeric(movie_data$week_day)
+```
+
+## 9) Open Date_week Difference
+```{r}
+movie_data$diff <- as.Date(movie_data$week) - as.Date(movie_data$open_date)
+movie_data$diff <- as.numeric(movie_data$diff)
+```
+
+```{r}
+write.xlsx(movie_data, "movie_data.xlsx", row.names = FALSE)
+```
+
+# 4. Refined Data
+## 1) Data Import
+```{r}
+movie_data_2 <- read.xlsx("D:/Data/contest/movie/movie_data_2.xlsx")
+
+str(movie_data_2)
+summary(movie_data_2)
+```
+
+## 2) Data Handling
+### 2-1) Open Date
+```{r}
+# movie_data_2$open_date <- as.Date(movie_data_2$open_date)
+## Imputation(total_attendance > 10,000 - googling + Excel / < 10,000 - mean)
+movie_data_2[which(is.na(movie_data_2$open_date)), "open_date"] <- "2011-10-10"
+
+split_year <- function(x){
+  strsplit(x, split = '-')[[1]][1]
+}
+
+split_month <- function(x){
+  strsplit(x, split = '-')[[1]][2]
+}
+
+split_day <- function(x){
+  strsplit(x, split = '-')[[1]][3]
+}
+
+movie_data_2$open_year <- sapply(movie_data_2$open_date, split_year)
+movie_data_2$open_month <- sapply(movie_data_2$open_date, split_month)
+movie_data_2$open_day <- sapply(movie_data_2$open_date, split_day)
+
+movie_data_2$open_year <- as.numeric(movie_data_2$open_year)
+movie_data_2$open_month <- as.numeric(movie_data_2$open_month)
+movie_data_2$open_day <- as.numeric(movie_data_2$open_day)
+```
+
+### 2-2) Rest
+```{r}
+# Week
+# movie_data_2$week <- as.Date(movie_data_2$week)
+
+# Actor_Actress
+movie_data_2[which(is.na(movie_data_2$actor_actress2)), "actor_actress2"] <- movie_data_2[which(is.na(movie_data_2$actor_actress2)), "actor_actress1"]
+movie_data_2[which(is.na(movie_data_2$actor_actress3)), "actor_actress3"] <- movie_data_2[which(is.na(movie_data_2$actor_actress3)), "actor_actress1"]
+
+# Difference
+movie_data_2$diff <- as.Date(movie_data_2$week) - as.Date(movie_data_2$open_date)
+movie_data_2$diff <- as.numeric(movie_data_2$diff)
+
+# Typicial Nationality
+movie_data_2[which(is.na(movie_data_2$typical_nationality)), "typical_nationality"] <- "국가 없음"
+```
+
+### 2-3) Feature Selection
+```{r}
+movieData <- movie_data_2 %>%
+  select(-c(rank, sales, sales_rate, total_sales, attendance, screen,
+         showing_frequency, nationality, open_date, week))
+```
+
+### 2-4) Production Company
+```{r}
+movieData %>%
+  group_by(production_company) %>%
+  summarise(sum = sum(total_attendance)) %>%
+  arrange(desc(sum)) -> productionCompany
+
+productionCompany$main_productionCompany <- NA
+productionCompany[2:26, ]$main_productionCompany <- productionCompany[2:26, ]$production_company
+productionCompany[which(is.na(productionCompany$main_productionCompany)), "main_productionCompany"] <- "기타"
+
+movieData <- merge(movieData, productionCompany[, c(1, 3)], by = c("production_company"), all.x = TRUE)
+```
+
+### 2-5) Distributor
+```{r}
+movieData %>%
+  group_by(distributor) %>%
+  summarise(sum = sum(total_attendance)) %>%
+  arrange(desc(sum)) -> distributor
+
+distributor$main_distributor <- NA
+distributor[1:15, ]$main_distributor <- distributor[1:15, ]$distributor
+distributor[which(is.na(distributor$main_distributor)), "main_distributor"] <- "기타"
+
+movieData <- merge(movieData, distributor[, c(1, 3)], by = c("distributor"), all.x = TRUE)
+```
+
+### 2-6) Director
+```{r}
+# Director
+movieData %>%
+  group_by(director) %>%
+  summarise(sum = sum(total_attendance)) %>%
+  arrange(desc(sum)) -> director
+
+director$main_director <- NA
+director[1:50, ]$main_director <- director[1:50, ]$director
+director[which(is.na(director$main_director)), "main_director"] <- "기타"
+
+movieData <- merge(movieData, director[, c(1, 3)], by = c("director"), all.x = TRUE)
+```
+
+### 2-7) Typicial Nationality
+```{r}
+movieData %>%
+  group_by(typical_nationality) %>%
+  summarise(sum = sum(total_attendance)) %>%
+  arrange(desc(sum)) -> typical_nationality
+
+typical_nationality$main_nationality <- NA
+typical_nationality[1:4, ]$main_nationality <- typical_nationality[1:4, ]$typical_nationality
+typical_nationality[which(is.na(typical_nationality$main_nationality)), "main_nationality"] <- "기타"
+
+movieData <- merge(movieData, typical_nationality[, c(1, 3)], by = c("typical_nationality"), all.x = TRUE)
+```
+
+### 2-8) Actor / Actress
+```{r}
+movieData %>%
+  group_by(actor_actress1) %>%
+  summarise(sum = sum(total_attendance)) %>%
+  arrange(desc(sum)) -> actor1
+
+actor1$main_actor_actress1 <- NA
+actor1[c(1:51), ]$main_actor_actress1 <- actor1[c(1:51), ]$actor_actress1 # including animation
+actor1[which(is.na(actor1$main_actor_actress1)), "main_actor_actress1"] <- "기타"
+
+movieData <- merge(movieData, actor1[, c(1, 3)], by = c("actor_actress1"), all.x = TRUE)
+
+movieData %>%
+  group_by(actor_actress2) %>%
+  summarise(sum = sum(total_attendance)) %>%
+  arrange(desc(sum)) -> actor2
+
+actor2$main_actor_actress2 <- NA
+actor2[c(1:51), ]$main_actor_actress2 <- actor2[c(1:51), ]$actor_actress2 # including animation
+actor2[which(is.na(actor2$main_actor_actress2)), "main_actor_actress2"] <- "기타"
+
+movieData <- merge(movieData, actor2[, c(1, 3)], by = c("actor_actress2"), all.x = TRUE)
+
+movieData %>%
+  group_by(actor_actress3) %>%
+  summarise(sum = sum(total_attendance)) %>%
+  arrange(desc(sum)) -> actor3
+
+actor3$main_actor_actress3 <- NA
+actor3[c(1:51), ]$main_actor_actress3 <- actor3[c(1:51), ]$actor_actress3 # including animation
+actor3[which(is.na(actor3$main_actor_actress3)), "main_actor_actress3"] <- "기타"
+
+movieData <- merge(movieData, actor3[, c(1, 3)], by = c("actor_actress3"), all.x = TRUE)
+
+movieData <- movieData %>%
+  select(-c(production_company, distributor, director, typical_nationality, 
+            movie_name, actor_actress1, actor_actress2, actor_actress3))
+```
+
+### 2-9) etc
+```{r}
+# Factoring
+movieData$main_nationality <- as.factor(movieData$main_nationality)
+movieData$grade <- as.factor(movieData$grade)
+movieData$genre <- as.factor(movieData$genre)
+movieData$main_productionCompany <- as.factor(movieData$main_productionCompany)
+movieData$main_distributor <- as.factor(movieData$main_distributor)
+movieData$main_director <- as.factor(movieData$main_director)
+
+# etc
+movieData$total_attendance <- ifelse(movieData$total_attendance <= 0, 1, movieData$total_attendance)
+```
+
+# 5. Modeling
+```{r}
+# Split train & test
+set.seed(1234)
+trainIndex <- sample(x = 1:nrow(movieData), size = 0.7 * nrow(movieData))
+train <- movieData[trainIndex, ]
+test <- movieData[-trainIndex, ]
+```
+
+```{r}
+# XGBoost
+trainLabel <- log(train$total_attendance)
+
+trainMat <- model.matrix(log(total_attendance) ~ ., data = train)
+testMat <- model.matrix(log(total_attendance) ~ ., data = test)
+```
+
+```{r}
+params <- list(eta = 0.05, max.depth = 5,
+               gamma = 0, colsample_bytree = 1,
+               subsample = 1,
+               objective = "reg:linear",
+               eval_metric = "rmse")
+
+set.seed(1234)
+xgbcv <- xgb.cv(params = params,
+                nrounds = 1000,
+                nfold = 10,
+                metrics = "rmse",
+                data = trainMat,
+                label = trainLabel,  
+                verbose = 0)
+
+xgb.best <- arrange(xgbcv$evaluation_log, test_rmse_mean)[1, ] 
+xgb.best
+```
+
+```{r}
+xgb <- xgboost(params = params,
+                       data = trainMat,
+                       label = trainLabel,
+                       nrounds = 4000,
+                       verbose = 1)
+
+# xgb.best$iter
+```
+
+# 6. Model Evaluation
+```{r}
+rmsle <- function(pred, act) {
+    if(length(pred) != length(act))
+        stop("The length of two vectors are different")
+    
+    len <- length(pred)
+    pred <- log(pred + 1)
+    act <- log(act + 1)
+    
+    msle <- mean((pred - act)^2)
+    
+    return(sqrt(msle))
+}
+```
+
+```{r}
+xgb_pred <- predict(xgb, testMat)
+xgb_pred <- exp(xgb_pred)
+plot(xgb_pred)
+```
+
+```{r}
+rmsle(xgb_pred, test$total_attendance)
+rmsle1 <- rmsle(xgb_pred, test$total_attendance) # 1.797032
+rmsle2 <- rmsle(xgb_pred, test$total_attendance) # 1.797032
+rmsle3 <- rmsle(xgb_pred, test$total_attendance) # 1.704394
+# 1500 : 1.653538
+# 2000 : 1.626783
+# 3000 : 1.59741
+# 4000 : 1.580407
+```
+
+# 7. Real prediction
+```{r}
+realTest <- read.xlsx("D:/Data/contest/movie/test.xlsx")
+
+realTest$total_attendance <- NA
+realTest$total_attendance <- 5000
+
+realTest <- realTest %>%
+  select(-movie_name)
+
+for(i in 4:9){
+  realTest[, i] <- as.factor(realTest[, i])
+}
+for(i in 4:12){
+    names(realTest)[i] <- paste0("main_", names(realTest)[i])
+}
+names(realTest)[7] <- "grade"
+names(realTest)[8] <- "genre"
+names(realTest)[4] <- "main_nationality"
+names(realTest)[11] <- "main_productionCompany"
+
+realTest <- realTest %>%
+  select(total_attendance, grade, genre, open_year, open_month, open_day, week_year,
+         week_month, week_day, diff, main_productionCompany, main_distributor,
+         main_director, main_nationality, main_actor_actress1, main_actor_actress2,
+         main_actor_actress3)
+
+test_real <- rbind(realTest, test)
+realMat <- model.matrix(log(total_attendance) ~ ., data = test_real)
+
+real_pred <- predict(xgb, realMat)
+real_pred <- exp(real_pred)
+
+real_pred[1:3] # 3080256 1158378 5578043
+```
+
