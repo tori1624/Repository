@@ -12,16 +12,16 @@ Department of Geography, Kyung Hee University, Seoul, South Korea
 
 ## Peer-reviewed Journal Articles
 ```bash
-1.	Lee, Y., Lee, Y., Seong, J. Stanescu, A., & Hwang, C. S. (2020). A Comparison of Network Clustering Algorithms in Keyword Network Analysis: A Case Study with Geography Conference Presentations. International Journal of Geospatial and Environmental Research, 7(3), 1.
-2.	Lee, Y., Lee, Y., Seong, J. Stanescu, A., Hwang, T., & Hwang, C. S. (2019). Analysis of GIS Research Trends in the U.S. with AAG Conference Presentations from 2000-2019. The Geographical Journal of Korea, 53(4), 495-508.
-3.	Lee, Y., & Hong, S.-Y. (2019). A machine learning approach to the prediction of individual travel mode choices. Journal of the Korean Data & Information Science Society, 30(5), 1011-1024.
-4.	Oh, J., Lee, Y., Jeong, Y., & Hong, S.-Y. (2019). An analysis of the National Household Travel Survey data for exploring spatial segregation of income groups. Journal of Transport Research, 26(1), 17-29.
+1.	<b>Lee, Y.</b>, Lee, Y., Seong, J. Stanescu, A., & Hwang, C. S. (2020). A Comparison of Network Clustering Algorithms in Keyword Network Analysis: A Case Study with Geography Conference Presentations. International Journal of Geospatial and Environmental Research, 7(3), 1.
+2.	Lee, Y., <b>Lee, Y.</b>, Seong, J. Stanescu, A., Hwang, T., & Hwang, C. S. (2019). Analysis of GIS Research Trends in the U.S. with AAG Conference Presentations from 2000-2019. The Geographical Journal of Korea, 53(4), 495-508.
+3.	<b>Lee, Y.</b>, & Hong, S.-Y. (2019). A machine learning approach to the prediction of individual travel mode choices. Journal of the Korean Data & Information Science Society, 30(5), 1011-1024.
+4.	Oh, J., <b>Lee, Y.</b>, Jeong, Y., & Hong, S.-Y. (2019). An analysis of the National Household Travel Survey data for exploring spatial segregation of income groups. Journal of Transport Research, 26(1), 17-29.
 ```
 
 ## Proceedings and Posters of Conference
 ```bash
-1.	Lee, Y., Lee, Y., Stanescu, A., & Seong, J. (2019). Summarizing the 2019 AAG conference presentations using keyword network analysis. In: The 74th Annual Meeting of the Southeastern Division of the American Association of Geographers (SEDAAG 2019). Wilmington, NC. (Poster)
-2.	Choi, C., Kim, Y., Lee, Y., & Hong, S.-Y. (2018). Evaluating efficiency of spatial analysis in cloud computing platforms. In 10th International Conference on Geographic Information Science (GIScience 2018). Melbourne, Australia.
+1.	<b>Lee, Y.</b>, Lee, Y., Stanescu, A., & Seong, J. (2019). Summarizing the 2019 AAG conference presentations using keyword network analysis. In: The 74th Annual Meeting of the Southeastern Division of the American Association of Geographers (SEDAAG 2019). Wilmington, NC. (Poster)
+2.	Choi, C., Kim, Y., <b>Lee, Y.</b>, & Hong, S.-Y. (2018). Evaluating efficiency of spatial analysis in cloud computing platforms. In 10th International Conference on Geographic Information Science (GIScience 2018). Melbourne, Australia.
 ```
 
 ## Professional Experience
