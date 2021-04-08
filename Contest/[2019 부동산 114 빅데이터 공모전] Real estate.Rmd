@@ -1,0 +1,422 @@
+---
+title: "RealEstate114"
+author: "Young Ho Lee"
+date: "2019.03.29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Basic packages
+library(dplyr)
+library(readxl)
+library(openxlsx)
+library(xgboost)
+```
+
+# 1. Data Import (1)
+```{r}
+# data path
+data.path <- "D:/Data/contest/realestate114/apart/"
+
+# file name
+file.list <- list.files(path = data.path)
+file.name <- substr(file.list, 1, nchar(file.list)-4)
+
+# empty data frame
+apartm.df <- data.frame()
+apartjw.df <- data.frame()
+
+# data import
+for (i in 1:length(file.list)) {
+  if (substr(file.list[i], 5, 6) == "매매") {
+    tmp.xlsx <- read_xlsx(paste0(data.path, file.list[i]), skip = 16)
+    apartm.df <- rbind(apartm.df, tmp.xlsx)
+  } else {
+    tmp.xlsx <- read_xlsx(paste0(data.path, file.list[i]), skip = 16)
+    apartjw.df <- rbind(apartjw.df, tmp.xlsx)
+  }
+}
+```
+
+# 2. Data Handling
+```{r}
+# apartm.df + apartjw.df
+apartm.df <- apartm.df %>%
+  mutate(거래유형 = "매매", '보증금(만원)' = NA, '월세(만원)' = NA) %>%
+  select(시군구, 번지, 본번, 부번, 단지명, 거래유형, `전용면적(㎡)`, 계약년월, 
+         계약일, `거래금액(만원)`, `보증금(만원)`, `월세(만원)`, 층, 건축년도, 
+         도로명)
+
+apartjw.df <- apartjw.df %>%
+  mutate(거래유형 = 전월세구분, '거래금액(만원)' = NA) %>%
+  select(시군구, 번지, 본번, 부번, 단지명, 거래유형, `전용면적(㎡)`, 계약년월, 
+         계약일, `거래금액(만원)`, `보증금(만원)`, `월세(만원)`, 층, 건축년도, 
+         도로명)
+
+apart.df <- rbind(apartm.df, apartjw.df)
+```
+
+```{r}
+# address table
+address.df <- apart.df %>%
+  mutate(address = paste(시군구, 번지, 단지명)) %>%
+  select(address)
+
+address.df <- unique(address.df)
+
+write.xlsx(address.df, "address_table.xlsx", row.names = FALSE)
+```
+
+# 3. Data Import (2)
+```{r}
+apart.join <- read.csv("D:/Data/contest/realestate114/join_result.csv")
+```
+
+# 4. Data Handling
+## 1) Feature Selecting & Rename
+```{r}
+apart.df <- apart.join[, c(3, 5, 10:14, 17:18, 22:23, 28:31, 35)]
+
+names(apart.df) <- c("month", "gu", "type", "area", "year", "day", "price", 
+                     "floor", "built_year", "x", "y", "landuse", 
+                     "station_count", "company", "employee", "lifepeople")
+
+# year
+apart.df$year <- substr(apart.df$year, 1, 4)
+
+# day
+apart.df$day <- ifelse(apart.df$day == "1~10", 1,
+                       ifelse(apart.df$day == "11~20", 2, 3))
+
+# price
+apart.df$price <- gsub(",", "", apart.df$price)
+
+# lifepeople
+apart.df <- apart.df %>%
+  filter(is.na(lifepeople) == FALSE)
+
+# data type
+apart.df$price <- as.numeric(apart.df$price)
+apart.df$landuse <- as.factor(apart.df$landuse)
+
+# gu
+apart.df$gu <- as.character(apart.df$gu)
+
+split_gu <- function(x){
+  strsplit(x, split = ' ')[[1]][2]
+}
+
+apart.df$gu <- sapply(apart.df$gu, split_gu)
+
+region1.df <- apart.df %>%
+  filter(type == "매매") %>%
+  filter(gu == "서초구" | gu == "송파구" | gu == "강남구" | gu == "용산구") %>%
+  select(-type)
+
+region2.df <- apart.df %>%
+  filter(type == "매매") %>%
+  filter(gu == "동작구" | gu == "관악구" | gu == "영등포구" | gu == "금천구" |
+           gu == "구로구" | gu == "양천구" | gu == "강서구") %>%
+  select(-type)
+
+region3.df <- apart.df %>%
+  filter(type == "매매") %>%
+  filter(gu == "마포구" | gu == "중구" | gu == "성동구" | gu == "광진구" |
+           gu == "강동구") %>%
+  select(-type)
+
+region4.df <- apart.df %>%
+  filter(type == "매매") %>%
+  filter(gu == "은평구" | gu == "서대문구" | gu == "종로구" | gu == "동대문구" | 
+           gu == "중랑구") %>%
+  select(-type)
+
+region5.df <- apart.df %>%
+  filter(type == "매매") %>%
+  filter(gu == "성북구" | gu == "강북구" | gu == "도봉구" | gu == "노원구") %>%
+  select(-type)
+```
+
+## 2) Data for Modeling(Benchmark)
+```{r}
+benchmark.df <- apart.df %>%
+  select(1:11) %>%
+  filter(type == "매매") %>%
+  select(-type)
+
+# train
+train.df <- benchmark.df %>%
+  filter(year != "2018") %>%
+  select(-year)
+
+# test
+test.df <- benchmark.df %>%
+  filter(year == "2018") %>%
+  select(-year)
+```
+
+## 3) Data for Modeling(Spatial)
+```{r}
+for (i in 1:5) {
+  tmp.data <- get(paste0("region", i, ".df"))
+  
+  tmp.train <- tmp.data %>%
+    filter(year != "2018") %>%
+    select(-year)
+  assign(paste0("region", i, ".tr"), tmp.train)
+  
+  tmp.test <- tmp.data %>%
+    filter(year == "2018") %>%
+    select(-year)
+  assign(paste0("region", i, ".te"), tmp.test)
+}
+```
+
+# 5. Modeling(Benchmark)
+```{r}
+params <- list(eta = 0.3, max.depth = 5,
+               gamma = 0, colsample_bytree = 1,
+               subsample = 1,
+               objective = "reg:linear",
+               eval_metric = "rmse")
+```
+
+```{r}
+# benchmark
+trainLabel <- log(train.df$price)
+trainMat <- model.matrix(log(price) ~ ., data = train.df)
+testMat <- model.matrix(log(price) ~ ., data = test.df)
+```
+
+```{r}
+set.seed(1234)
+xgbcv <- xgb.cv(params = params,
+                nrounds = 200,
+                nfold = 10,
+                metrics = "rmse",
+                data = trainMat,
+                label = trainLabel,  
+                verbose = 0)
+
+xgb.best <- arrange(xgbcv$evaluation_log, test_rmse_mean)[1, ]
+xgb.best
+```
+
+```{r}
+benchmark.model <- xgboost(params = params,
+                           data = trainMat,
+                           label = trainLabel,
+                           nrounds = xgb.best$iter,
+                           verbose = 1)
+```
+
+# 6. Modeling(Spatial)
+```{r}
+for (i in 1:5) {
+  tmp.train <- get(paste0("region", i, ".tr"))
+  tmp.test <- get(paste0("region", i, ".te"))
+  
+  tmp.Label <- log(tmp.train$price)
+  assign(paste0("trainsLabel", i), tmp.Label)
+  
+  tmp.trmat <- model.matrix(log(price) ~ ., data = tmp.train)
+  assign(paste0("trainsMat", i), tmp.trmat)
+  
+  tmp.temat <- model.matrix(log(price) ~ ., data = tmp.test)
+  assign(paste0("testsMat", i), tmp.temat)
+}
+```
+
+```{r}
+# region1
+set.seed(1234)
+xgbcv <- xgb.cv(params = params,
+                nrounds = 200,
+                nfold = 10,
+                metrics = "rmse",
+                data = trainsMat1,
+                label = trainsLabel1,  
+                verbose = 0)
+
+xgb.best1 <- arrange(xgbcv$evaluation_log, test_rmse_mean)[1, ]
+xgb.best1
+```
+
+```{r}
+spatial.model1 <- xgboost(params = params,
+                          data = trainsMat1,
+                          label = trainsLabel1,
+                          nrounds = xgb.best1$iter,
+                          verbose = 1)
+```
+
+```{r}
+# region2
+set.seed(1234)
+xgbcv <- xgb.cv(params = params,
+                nrounds = 200,
+                nfold = 10,
+                metrics = "rmse",
+                data = trainsMat2,
+                label = trainsLabel2,  
+                verbose = 0)
+
+xgb.best2 <- arrange(xgbcv$evaluation_log, test_rmse_mean)[1, ]
+xgb.best2
+```
+
+```{r}
+spatial.model2 <- xgboost(params = params,
+                         data = trainsMat2,
+                         label = trainsLabel2,
+                         nrounds = xgb.best2$iter,
+                         verbose = 1)
+```
+
+```{r}
+# region3
+set.seed(1234)
+xgbcv <- xgb.cv(params = params,
+                nrounds = 200,
+                nfold = 10,
+                metrics = "rmse",
+                data = trainsMat3,
+                label = trainsLabel3,  
+                verbose = 0)
+
+xgb.best3 <- arrange(xgbcv$evaluation_log, test_rmse_mean)[1, ]
+xgb.best3
+```
+
+```{r}
+spatial.model3 <- xgboost(params = params,
+                          data = trainsMat3,
+                          label = trainsLabel3,
+                          nrounds = xgb.best3$iter,
+                          verbose = 1)
+```
+
+```{r}
+# region4
+set.seed(1234)
+xgbcv <- xgb.cv(params = params,
+                nrounds = 200,
+                nfold = 10,
+                metrics = "rmse",
+                data = trainsMat4,
+                label = trainsLabel4,  
+                verbose = 0)
+
+xgb.best4 <- arrange(xgbcv$evaluation_log, test_rmse_mean)[1, ]
+xgb.best4
+```
+
+```{r}
+spatial.model4 <- xgboost(params = params,
+                          data = trainsMat4,
+                          label = trainsLabel4,
+                          nrounds = xgb.best4$iter,
+                          verbose = 1)
+```
+
+```{r}
+# region5
+set.seed(1234)
+xgbcv <- xgb.cv(params = params,
+                nrounds = 200,
+                nfold = 10,
+                metrics = "rmse",
+                data = trainsMat5,
+                label = trainsLabel5,  
+                verbose = 0)
+
+xgb.best5 <- arrange(xgbcv$evaluation_log, test_rmse_mean)[1, ]
+xgb.best5
+```
+
+```{r}
+spatial.model5 <- xgboost(params = params,
+                          data = trainsMat5,
+                          label = trainsLabel5,
+                          nrounds = xgb.best5$iter,
+                          verbose = 1)
+```
+
+# 6. Model Evaluation
+```{r}
+rmsle <- function(pred, act) {
+    if(length(pred) != length(act))
+        stop("The length of two vectors are different")
+    
+    len <- length(pred)
+    pred <- log(pred + 1)
+    act <- log(act + 1)
+    
+    msle <- mean((pred - act)^2)
+    
+    return(sqrt(msle))
+}
+
+# benckmark
+bench.pred <- predict(benchmark.model, testMat)
+bench.pred <- exp(bench.pred)
+bench.pred <- ifelse(bench.pred < 0, 0, bench.pred)
+
+rmsle(test.df$price, bench.pred) # 0.2903337
+
+# spatial
+spatial.pred <- predict(spatial.model, testsMat)
+spatial.pred <- exp(spatial.pred)
+spatial.pred <- ifelse(spatial.pred < 0, 0, spatial.pred)
+
+rmsle(test.df$price, spatial.pred) 
+# 1 : 0.2897977 / 2 : 0.2881733 / 3 : 0.2877544 / 4 : 0.2881031 / 5 : 0.2881031
+
+# spatial(region1~5)
+region.pred <- c()
+
+for (i in 1:5) {
+  tmp.model <- get(paste0("spatial.model", i))
+  tmp.testmat <- get(paste0("testsMat", i))
+  
+  tmp.pred <- predict(tmp.model, tmp.testmat)
+  tmp.pred <- exp(tmp.pred)
+  tmp.pred <- ifelse(tmp.pred < 0, 0, tmp.pred)
+  
+  region.pred <- c(region.pred, tmp.pred)
+}
+
+actualprice <- c(region1.te$price, region2.te$price, region3.te$price,
+                 region4.te$price, region5.te$price)
+
+rmsle(actualprice, region.pred) # 0.2795946
+```
+
+```{r}
+rmse <- function(actual, predict){
+  if(length(actual) != length(predict))
+      stop("The length of two vectors are different")
+
+  length <- length(actual)
+  errorSum <- sum((actual - predict)^2)
+  
+  return(sqrt(errorSum / length))
+}
+
+# benckmark
+bench.pred <- predict(benchmark.model, testMat)
+bench.pred <- ifelse(bench.pred < 0, 0, bench.pred)
+
+rmse(test.df$price, bench.pred) # 0.2903337
+
+# spatial
+spatial.pred <- predict(spatial.model, testsMat)
+spatial.pred <- ifelse(spatial.pred < 0, 0, spatial.pred)
+
+rmse(test.df$price, spatial.pred) 
+```
+

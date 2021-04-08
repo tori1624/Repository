@@ -1,0 +1,37 @@
+---
+title: "Medical Treatment Geography"
+author: "Young Ho Lee"
+date: "2017³â 4¿ù 2ÀÏ"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Basic packages
+library(Kendall)
+library(pspearman)
+
+#setwd
+knitr::opts_knit$set(root.dir = "D:/Data/Medical_Treatment_Geography")
+```
+
+```{r}
+MTG <- read.csv("D:/Data/Medical_Treatment_Geography/MTG2.csv")
+```
+
+```{r}
+summary(Kendall(MTG$A, MTG$B))
+summary(Kendall(MTG$A, MTG$C))
+summary(Kendall(MTG$A, MTG$D))
+summary(Kendall(MTG$A, MTG$E))
+```
+
+```{r}
+spearman.test(MTG$A, MTG$B)
+spearman.test(MTG$A, MTG$C)
+spearman.test(MTG$A, MTG$D)
+spearman.test(MTG$A, MTG$E)
+
+```
+
