@@ -1,0 +1,395 @@
+---
+layout: post
+title: '2018-04-30'
+author: "Young Ho Lee"
+date: "2018.04.30"
+categories: Lecture
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Basic Packages
+library(dplyr)
+library(ggplot2)
+library(rgdal)
+library(openxlsx)
+library(caret) # Confusion matrix
+library(rpart) # DT
+library(rpart.plot) # DT
+library(e1071) # SVM
+library(nnet) # MNL
+```
+
+# 1. Data Import
+```{r}
+htd <- read.csv("D:/Data/Public_data/HTD/htd.csv")
+
+table(factor(htd[, 59]))
+```
+
+# 2. Data Handling
+## 1) Data Split
+```{r}
+# Individual information
+htd.idv <- htd[, 1:64]
+
+# Travel
+htd.tra1 <- htd[, 66:87]
+htd.tra2 <- htd[, 117:138]
+htd.tra3 <- htd[, 168:189]
+htd.tra4 <- htd[, 219:240]
+htd.tra5 <- htd[, 270:291]
+htd.tra6 <- htd[, 321:342]
+```
+
+## 2) Column selection
+```{r}
+# Individual information
+htd.idv <- htd.idv[, c(6, 8, 9, 12:18, 41:44, 47, 55:59, 62, 64)]
+
+# Travel
+for (i in 1:6) {
+  tmp <- get(paste0("htd.tra", i))
+  tmp <- tmp[, -c(6, 8, 14, 21)]
+  for (j in 1:ncol(tmp)) {
+    names(tmp)[j] <- substr(names(tmp)[j], 4, nchar(names(tmp)[j]))
+  }
+  assign(paste0("htd.tra", i), tmp)
+}
+```
+
+## 3) Combine Data(Individual & Travel)
+```{r}
+# cbind
+for (i in 1:6) {
+  tmp.tra <- get(paste0("htd.tra", i))
+  tmp <- cbind(htd.idv, tmp.tra)
+  assign(paste0("htd", i), tmp)
+}
+
+# rbind
+htd.re <- rbind(htd1, htd2, htd3, htd4, htd5, htd6)
+```
+
+## 4) NA
+```{r}
+# travel or not
+htd.re <- htd.re[htd.re[, 20] == 1 & is.na(htd.re[, 23]) == FALSE, ]
+
+# residence = departure
+htd.re <- htd.re[htd.re[, 4] == htd.re[, 22], ]
+
+# destination & stops
+htd.re1 <- htd.re[htd.re[ ,33] == 2, -c(34:40)]
+htd.re1 <- htd.re1[is.na(htd.re1[, 23]) == FALSE, ] # all NA : 1 ??
+htd.re2 <- htd.re[htd.re[ ,33] == 1, -c(29:34, 40)]
+htd.re2 <- htd.re2[is.na(htd.re2[, 23]) == FALSE, ] # all NA : 1 ??
+names(htd.re2)[29:33] <- names(htd.re1)[29:33]
+htd.re <- rbind(htd.re1, htd.re2)
+
+# subway accessibility
+htd.re[is.na(htd.re[, 2]) == TRUE, 2] <- 12 # mean(NA : 2521)
+
+# occupation
+htd.re[is.na(htd.re[, 15]) == TRUE, 15] <- 9 # the others(NA : 1678)
+
+# destination
+htd.re <- htd.re[is.na(htd.re[, 27]) == FALSE, ] # NA : 2
+
+# destination code
+htd.re <- htd.re[is.na(htd.re[, 28]) == FALSE, ] # NA : 1
+
+# destination time
+htd.re <- htd.re[is.na(htd.re[, 30]) == FALSE, ] # NA : 1
+```
+
+## 5) Removing Unnecessary Columns (1) & Rename
+```{r}
+# columns
+htd.eng <- htd.re[, -c(16, 19:21, 33)]
+
+# rename
+names(htd.eng)[1] <- "bus_accesibility_min"
+names(htd.eng)[2] <- "subway_accesibility_min"
+names(htd.eng)[3] <- "N_household"
+names(htd.eng)[4] <- "dong_code"
+names(htd.eng)[5] <- "gu_code"
+names(htd.eng)[6] <- "gu_name"
+names(htd.eng)[7] <- "dong_name"
+names(htd.eng)[8] <- "residence_type"
+names(htd.eng)[9] <- "income_month"
+names(htd.eng)[10] <- "car"
+names(htd.eng)[11] <- "birth_year"
+names(htd.eng)[12] <- "sex"
+names(htd.eng)[13] <- "driver_license"
+names(htd.eng)[14] <- "education_level"
+names(htd.eng)[15] <- "occupation"
+names(htd.eng)[16] <- "travel_month"
+names(htd.eng)[17] <- "travel_day"
+names(htd.eng)[18] <- "departure_code"
+names(htd.eng)[19] <- "departure_time1"
+names(htd.eng)[20] <- "departure_time2"
+names(htd.eng)[21] <- "departure_time3"
+names(htd.eng)[22] <- "travel_purpose"
+names(htd.eng)[23] <- "destination"
+names(htd.eng)[24] <- "destination_code"
+names(htd.eng)[25] <- "travel_mode"
+names(htd.eng)[26] <- "destination_time1"
+names(htd.eng)[27] <- "destination_time2"
+names(htd.eng)[28] <- "destination_time3"
+```
+
+## 6) Distance
+### 6-1) Data Import
+```{r}
+# (1) shp
+korea.sp <- readOGR("D:/Data/map/shp/nsdi/kostat/dong/Z_SOP_BND_ADM_DONG_PG.shp",
+                    p4s = "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 
+                    +y_0=500000 +ellps=bessel +units=m +no_defs")
+korea.df <- data.frame(korea.sp)
+
+# (2) dong code
+dong_code <- read.xlsx(file.choose())
+```
+
+### 6-2) Data handling
+```{r}
+# (1) shp
+## clip(seoul)
+seoul.sp <- korea.sp[substr(as.character(korea.sp$ADM_DR_CD), 1, 2) == "11", ]
+seoul.df <- data.frame(seoul.sp)
+
+## arrange
+name.order1 <- order(seoul.df$ADM_DR_NM)
+seoul.sp <- seoul.sp[name.order1, ]
+seoul.df <- data.frame(seoul.sp)
+
+## central points
+dong.xy <- data.frame(coordinates(seoul.sp))
+
+# (2) dong code
+## columns
+dong_code <- dong_code[, c(3, 6)]
+
+## rename
+names(dong_code)[1] <- "dong_name"
+names(dong_code)[2] <- "dong_code"
+
+## filtering
+dong_code <- dong_code[!duplicated(dong_code$dong_code), ]
+
+## arrange
+name.order2 <- order(dong_code$dong_name)
+dong_code <- dong_code[name.order2, ]
+```
+
+### 6-3) Merge
+```{r}
+# (1) dong
+dong_final <- cbind(dong_code, dong.xy)
+
+names(dong_final)[3] <- "x"
+names(dong_final)[4] <- "y"
+
+# (2) htd
+htd.d <- merge(htd.eng, dong_final[, -1], by.x = c("departure_code"), 
+                 by.y = c("dong_code"), all.x = TRUE)
+htd.d <- merge(htd.d, dong_final[, -1], by.x = c("destination_code"), 
+                 by.y = c("dong_code"), all.x = TRUE)
+
+# arrange
+htd.d <- htd.d[, c(3:19, 2, 29:30, 20:24, 1, 31:32, 25:28)]
+
+# NA
+htd.d <- htd.d[is.na(htd.d[, 19]) == FALSE, ] # NA: 655
+htd.d <- htd.d[is.na(htd.d[, 28]) == FALSE, ] # NA: 7859
+```
+
+### 6-4) Distance Calculation
+```{r}
+# function
+di.cal <- function(data) {
+  data1 <- c(x = data[, 19], y = data[, 20])
+  data2 <- c(x = data[, 27], y = data[, 28])
+  data.x <- data.frame(rbind(data1, data2))
+  data.sp <- SpatialPoints(data.x)
+  result <- dist(data.frame(data.sp), method = "euclidean")
+  as.vector(result)
+}
+
+# calculation
+d <- vector()
+
+for(i in 1:nrow(htd.d)) {
+  tmp <- di.cal(htd.d[i, ])
+  d <- c(d, tmp)
+}
+
+# merge
+htd.d <- data.frame(htd.d, d)
+
+# columns & name
+htd.dis <- htd.d[, -c(4:5, 7, 18:20, 26:28)]
+names(htd.dis)[24] <- "distance"
+
+# write.csv(htd.dis, "htddis.csv", row.names = FALSE)
+```
+
+## 7) Spent Time
+```{r}
+# am / pm
+htd.dis[htd.dis$departure_time1 == 1, 15] <- 0
+htd.dis[htd.dis$departure_time1 == 2, 15] <- 12
+
+htd.dis[htd.dis$destination_time1 == 1, 21] <- 0
+htd.dis[htd.dis$destination_time1 == 2, 21] <- 12
+
+# time
+htd.time <- htd.dis %>%
+  mutate(departure_time = departure_time1 * 60 + departure_time2 * 60 + 
+           departure_time3,
+         destination_time = destination_time1 * 60 + destination_time2 * 60 +
+           destination_time3) %>%
+  mutate(spent_time = destination_time - departure_time) %>%
+  select(-c(departure_time1, departure_time2, departure_time3, departure_time,
+            destination_time1, destination_time2, destination_time3, 
+            destination_time))
+
+htd.time <- htd.time[htd.time$spent_time > 0, ]
+```
+
+## 8) Travel Mode
+```{r}
+# ship & the others X
+htd.time <- htd.time[htd.time$travel_mode < 19, ]
+
+# category
+htd.fina <- htd.time %>%
+  mutate(travel_mode_c = ifelse(travel_mode == 1, "walk",
+                         ifelse(travel_mode >= 4 & travel_mode <= 13, "public",
+                                "private"))) %>%
+  select(-travel_mode)
+```
+
+## 9) The others & Factor
+```{r}
+# income
+htd.fina <- htd.fina[htd.fina$income_month != 9, ]
+
+# travel purpose
+htd.fina[htd.fina$travel_purpose == 33, 15] <- 3
+
+# factor
+htd.final <- htd.fina
+
+htd.final$residence_type <- as.factor(htd.final$residence_type)
+htd.final$income_month <- as.factor(htd.final$income_month)
+htd.final$car <- as.factor(htd.final$car)
+htd.final$sex <- as.factor(htd.final$sex)
+htd.final$driver_license <- as.factor(htd.final$driver_license)
+htd.final$education_level <- as.factor(htd.final$education_level)
+htd.final$occupation <- as.factor(htd.final$occupation)
+htd.final$travel_purpose <- as.factor(htd.final$travel_purpose)
+htd.final$destination <- as.factor(htd.final$destination)
+htd.final$travel_mode_c <- as.factor(htd.final$travel_mode_c)
+
+# write.csv(htd.final, "htdfinal.csv", row.names = FALSE)
+# private : 45493(23%) / pubic : 67373(35%) / walk : 81562(42%)
+```
+
+## 10) Correlation & VIF
+```{r}
+library(corrplot)
+
+  htd.cor <- htd.final[, -c(4, 19)]
+names(htd.cor) <- 1:17
+cor.result <- cor(htd.cor)
+corrplot(cor.result, method = "color", type = "upper", addCoef.col = "black", 
+         tl.col = "black", tl.srt = 45, diag = FALSE)
+```
+
+```{r}
+library(car)
+
+sort(vif(lm(as.numeric(travel_mode_c) ~ ., data = htd.final[, -4])), 
+     decreasing = TRUE)
+```
+
+# 3. Modeling
+## 1) Data Split
+```{r}
+htd.final <- read.csv("D:/article/data_code/htdfinal.csv")
+
+htd.final$residence_type <- as.factor(htd.final$residence_type)
+htd.final$income_month <- as.factor(htd.final$income_month)
+htd.final$car <- as.factor(htd.final$car)
+htd.final$sex <- as.factor(htd.final$sex)
+htd.final$driver_license <- as.factor(htd.final$driver_license)
+htd.final$education_level <- as.factor(htd.final$education_level)
+htd.final$occupation <- as.factor(htd.final$occupation)
+htd.final$travel_purpose <- as.factor(htd.final$travel_purpose)
+htd.final$destination <- as.factor(htd.final$destination)
+htd.final$travel_mode_c <- as.factor(htd.final$travel_mode_c)
+
+set.seed(1234)
+trainIndex <- sample(1:nrow(htd.final), size = 0.7 * nrow(htd.final))
+train <- htd.final[trainIndex, -4]
+test <- htd.final[-trainIndex, -4]
+```
+
+## 2) Decision Tree (CART)
+```{r}
+DT <- rpart(travel_mode_c ~ ., data = train, method = "class")
+rpart.plot(DT)
+```
+
+```{r}
+predictDT <- predict(DT, test, type = "class")
+confusionMatrix(predictDT, test$travel_mode_c)
+```
+
+## 3) Support Vector Machine
+```{r}
+hyperpar <- tune.svm(travel_mode_c ~ ., data = train, 
+                     gamma = 2^(-1:1), cost = 2^(2:4))
+```
+
+```{r}
+SVM <- svm(travel_mode_c ~ ., data = train)
+```
+
+```{r}
+predictSVM <- predict(SVM, test)
+confusionMatrix(predictSVM, test$travel_mode_c)
+```
+
+## 4) Multinomial Logistic Regression
+```{r}
+MNL <- multinom(travel_mode_c ~ ., data = train)
+```
+
+```{r}
+predictMNL <- predict(MNL, test)
+confusionMatrix(predictMNL, test$travel_mode_c)
+```
+
+```{r}
+library(stargazer)
+
+stargazer(MNL, type = "text")
+```
+
+```{r}
+library(classInt)
+
+x <- summary(MNL)
+
+MNL.public <- round(x$coefficients[seq(3, 96, 2)], 3)
+MNL.walk <- round(x$coefficients[seq(4, 96, 2)], 3)
+
+class.public <- classIntervals(MNL.public, 4, style = "quantile")
+class.walk <- classIntervals(MNL.walk, 4, style = "quantile")
+```
