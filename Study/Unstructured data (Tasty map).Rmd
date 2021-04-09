@@ -1,0 +1,303 @@
+---
+title: "unstructured_data"
+author: "Young Ho Lee"
+date: "2018.05.04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Basic packages
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(lubridate)
+library(rvest)
+library(rgdal)
+library(RColorBrewer)
+library(classInt)
+```
+
+# 1. Get URL
+## 1) Basic URL
+```{r}
+basic.url <- "https://store.naver.com/restaurants/list?filterId=r09&page=11&query=%EC%84%9C%EC%9A%B8%20%EB%A7%9B%EC%A7%91"
+
+basic.html <- read_html(basic.url, encoding = "UTF-8")
+
+# name / category / businesscategory / x / y / blogCafeReviewCount /commonAddr
+# page = 250
+```
+
+## 2) test
+```{r}
+test_html <- html_nodes(basic.html, css = "script")[3]
+test_html
+
+test <- test_html %>% html_text()
+
+thetext <- gsub(pattern = "\"", replacement = "", test)
+```
+
+#2. Test
+## 1) Name
+```{r}
+name.text <- strsplit(thetext, split = "name:")
+name.text[[1]][2]
+
+name.text1 <- strsplit(name.text[[1]], split = ",")
+name.text1[[2]][1] # 2:101
+```
+
+## 2) Business Categroy
+```{r}
+bc.text <- strsplit(thetext, split = "businessCategory:")
+bc.text[[1]][2]
+
+bc.text1 <- strsplit(bc.text[[1]], split = ",")
+bc.text1[[2]][1] # 2:101
+```
+
+## 3) Coordinates
+```{r}
+# x
+x.text <- strsplit(thetext, split = ",x:")
+x.text[[1]][2]
+
+x.text1 <- strsplit(x.text[[1]], split = ",")
+x.text1[[2]][1] # 2:101
+
+# y
+y.text <- strsplit(thetext, split = ",y:")
+y.text[[1]][2]
+
+y.text1 <- strsplit(y.text[[1]], split = ",")
+y.text1[[2]][1] # 4:103
+```
+
+## 4) Category
+```{r}
+c.text <- strsplit(thetext, split = "category:")
+c.text[[1]][2]
+
+c.text1 <- strsplit(c.text[[1]], split = ",d")
+c.text1[[2]][1] # 2:101
+```
+
+## 5) Blog Cafe Review Count
+```{r}
+count.text <- strsplit(thetext, split = "blogCafeReviewCount:")
+count.text[[1]][2]
+
+count.text1 <- strsplit(count.text[[1]], split = ",b")
+count.text1[[2]][1] # 2:101
+```
+
+## 6) Gu Name
+```{r}
+gu.text <- strsplit(thetext, split = "commonAddr:")
+gu.text[[1]][2]
+
+gu.text1 <- strsplit(gu.text[[1]], split = ",a")
+gu.text1[[2]][1] # 2:101
+```
+
+# 3. Stack Text (1page)
+```{r}
+name <- vector(); business_category <- vector(); x <- vector(); y <- vector()
+category <- vector(); review <- vector(); gu_name <- vector()
+```
+
+```{r}
+for (i in 1:100) {
+  # name
+  tmp.name <- name.text1[[i+1]][1]
+  name <- c(name, tmp.name)
+  
+  # business category
+  tmp.bc <- bc.text1[[i+1]][1]
+  business_category <- c(business_category, tmp.bc)
+  
+  # coordinates
+  tmp.x <- x.text1[[i+1]][1]
+  x <- c(x, tmp.x)
+  
+  tmp.y <- y.text1[[i+3]][1]
+  y <- c(y, tmp.y)
+  
+  # category
+  tmp.c <- c.text1[[i+1]][1]
+  category <- c(category, tmp.c)
+  
+  # blog cafe review
+  tmp.review <- count.text1[[i+1]][1]
+  review <- c(review, tmp.review)
+  
+  # gu name
+  tmp.gu <- gu.text1[[i+1]][1]
+  gu_name <- c(gu_name, tmp.gu)
+  
+  tasty.df <- data.frame(name, business_category, x, y, category, review,
+                         gu_name)
+}
+```
+
+# 4. Stack URL
+```{r}
+# basic setting
+PageNumber <- 1:50
+basic.url1 <- "https://store.naver.com/restaurants/list?filterId=r09&page="
+basic.url2 <- "&query=%EC%84%9C%EC%9A%B8%20%EB%A7%9B%EC%A7%91"
+
+tasty.df <- data.frame()
+```
+
+```{r}
+for (i in PageNumber) {
+  # url
+  basic.url <- paste0(basic.url1, i * 5 - 4, basic.url2)
+  
+  # parsing
+  basic.html <- read_html(basic.url, encoding = "UTF-8")
+  
+  # text extraction
+  text.html <- html_nodes(basic.html, css = "script")[3]
+  text <- text.html %>% html_text()
+  thetext <- gsub(pattern = "\"", replacement = "", text)
+  
+  # name
+  name.text <- strsplit(thetext, split = "name:")
+  name.text1 <- strsplit(name.text[[1]], split = ",")
+  
+  # business category
+  bc.text <- strsplit(thetext, split = "businessCategory:")
+  bc.text1 <- strsplit(bc.text[[1]], split = ",")
+  
+  # coordinates
+  x.text <- strsplit(thetext, split = ",x:")
+  x.text1 <- strsplit(x.text[[1]], split = ",")
+  
+  y.text <- strsplit(thetext, split = ",y:")
+  y.text1 <- strsplit(y.text[[1]], split = ",")
+  
+  # category
+  c.text <- strsplit(thetext, split = "category:")
+  c.text1 <- strsplit(c.text[[1]], split = ",d")
+  
+  # blog cafe review
+  review.text <- strsplit(thetext, split = "blogCafeReviewCount:")
+  review.text1 <- strsplit(review.text[[1]], split = ",b")
+  
+  # gu name
+  gu.text <- strsplit(thetext, split = "commonAddr:")
+  gu.text1 <- strsplit(gu.text[[1]], split = ",a")
+  
+  # empty vector
+  name <- vector(); business_category <- vector(); x <- vector(); y <- vector()
+  category <- vector(); review <- vector(); gu_name <- vector()
+  
+  # data.frame
+  for (j in 1:100) {
+    # name
+    tmp.name <- name.text1[[j+1]][1]
+    name <- c(name, tmp.name)
+      
+    # business category
+    tmp.bc <- bc.text1[[j+1]][1]
+    business_category <- c(business_category, tmp.bc)
+    
+    # coordinates
+    tmp.x <- x.text1[[j+1]][1]
+    x <- c(x, tmp.x)
+    
+    tmp.y <- y.text1[[j+3]][1]
+    y <- c(y, tmp.y)
+    
+    # category
+    tmp.c <- c.text1[[j+1]][1]
+    category <- c(category, tmp.c)
+    
+    # blog cafe review
+    tmp.review <- review.text1[[j+1]][1]
+    review <- c(review, tmp.review)
+    
+    # gu name
+    tmp.gu <- gu.text1[[j+1]][1]
+    gu_name <- c(gu_name, tmp.gu)
+    
+    tmp.df <- data.frame(name, business_category, x, y, category, review,
+                         gu_name)
+  }
+  
+  tasty.df <- rbind(tasty.df, tmp.df)
+  cat("page", i * 5 - 4, "is done\n")
+}
+```
+
+```{r}
+write.csv(tasty.df, "tasty.csv", row.names = FALSE)
+```
+
+# 5. Data Import
+```{r}
+tasty.df <- read.csv("D:/Study/2018/unstructured/tasty/tasty.csv")
+```
+
+## 1) Data handling
+```{r}
+tasty.df$review <- as.character(tasty.df$review)
+tasty.df$review <- gsub(",", "", tasty.df$review)
+tasty.df$review <- as.numeric(tasty.df$review)
+```
+
+# 6. EDA
+## 1) Map
+```{r}
+# data import
+korea.sp <- readOGR("D:/Data/map/shp/nsdi/kostat/dong/Z_SOP_BND_ADM_DONG_PG.shp",
+                    p4s = "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 
+                    +y_0=500000 +ellps=bessel +units=m +no_defs",
+                    encoding = "UTF8")
+korea.df <- data.frame(korea.sp)
+
+# data extract(seoul)
+seoul.sp <- korea.sp[substr(as.character(korea.sp$ADM_DR_CD), 1, 2) == "11", ]
+
+# Coordinate system
+wgs <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+seoul.wgs <- spTransform(seoul.sp, wgs)
+
+# points data
+tasty.points <- SpatialPoints(tasty.df[, 3:4], proj4string = wgs)
+
+# color
+orrd <- brewer.pal(5, "OrRd")
+reviewClass <- classIntervals(tasty.df$review, n = 5)
+
+# bbox
+x <- bbox(seoul.wgs)
+
+# legend
+a <- as.integer(reviewClass[[2]])
+
+# visualization
+plot(seoul.wgs, border = "Grey 50")
+plot(tasty.points, add = TRUE, pch = 19, cex = 1.2, 
+     col = findColours(reviewClass, orrd))
+axis(1, at = seq(x[1], x[3], by = ((x[3] - x[1]) / 4)), 
+     labels = parse(text = degreeLabelsEW(seq(x[1], x[3],
+                                          by = ((x[3] - x[1]) / 4)))))
+axis(2, at = seq(x[2], x[4], by = ((x[4] - x[2]) / 4)), 
+     labels = parse(text = degreeLabelsNS(seq(x[2], x[4], 
+                                          by = ((x[4] - x[2]) / 4)))))
+legend(126.72, 37.71, fill = orrd,
+       legend = c(paste("Less than", a[2]), paste(a[2], "-", a[3]), 
+                  paste(a[3], "-", a[4]), paste(a[4], "-", a[5]),
+                  paste("More than", a[5])),
+       title = "Review Count", cex = 1.4, bty = "n")
+```
+

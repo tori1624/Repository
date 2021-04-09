@@ -1,0 +1,257 @@
+---
+title: "lab_SAR"
+author: "Young Ho Lee"
+date: "2018년 11월 16일"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# basic packages
+library(dplyr)
+library(rgdal)
+library(RColorBrewer)
+library(classInt)
+library(readxl)
+library(spdep)
+```
+
+# 1. Data
+```{r}
+# data
+seoul2016 <- read_excel("D:/Data/Public_data/real_transaction_price_2017/2016/seoul2016_final2.xlsx")
+
+# polygon data
+yongsan.sp <- readOGR("D:/Study/2018/GISpractice/lab_SAR/yongsan.shp")
+yongsan.wgs <- spTransform(yongsan.sp, CRS("+proj=longlat +datum=WGS84 
+                                           +no_defs +ellps=WGS84 
+                                           +towgs84=0,0,0"))
+
+# dependent Variable
+yongsan.df <- seoul2016 %>%
+  filter(gu == "용산구") %>%
+  mutate(jeonse = deposit + montly_rent * 100)
+
+# point data
+wgs <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+monthly.po <- SpatialPoints(yongsan.df[, 9:10], proj4string = wgs)
+
+# visualization
+x <- bbox(yongsan.wgs)
+orrd <- brewer.pal(7, "OrRd")
+jeonse.class <- classIntervals(yongsan.df$jeonse, n = 7, style = "jenks")
+y <- round(jeonse.class[[2]], 2)
+
+plot(yongsan.wgs, border = "Grey 50")
+plot(monthly.po, col = findColours(jeonse.class, orrd), add = TRUE,
+     pch = 19, cex = 1.25)
+axis(1, at = seq(x[1], x[3], by = ((x[3] - x[1]) / 4)), 
+     labels = parse(text = degreeLabelsEW(seq(x[1], x[3],
+                                              by = ((x[3] - x[1]) / 4)))))
+axis(2, at = seq(x[2], x[4], by = ((x[4] - x[2]) / 4)), 
+     labels = parse(text = degreeLabelsNS(seq(x[2], x[4], 
+                                              by = ((x[4] - x[2]) / 4)))))
+legend(126.938, 37.557, fill = orrd,
+       legend = c(paste("Less than", y[2]), paste(y[2], "-", y[3]), 
+                  paste(y[3], "-", y[4]), paste(y[4], "-", y[5]),
+                  paste(y[5], "-", y[6]), paste(y[6], "-", y[7]),
+                  paste("More than", y[7])),
+       title = "Jeonse", cex = 1.25, bty = "n")
+
+# Gwanak = 126.891, 37.458
+```
+
+# 2. Linear Model
+```{r}
+mf <- jeonse ~ theater_dist + subway_dist + univ_dist + host_dist + police_dist
+
+linear.model <- lm(mf, data = yongsan.df)
+
+summary(linear.model)
+```
+
+## 1) Residuals(OLS)
+```{r}
+# variable
+yongsan.df$residuals <- linear.model$residuals
+
+# map visualization
+residual.class <- classIntervals(yongsan.df$residuals, n = 7, style = "jenks")
+a <- round(residual.class[[2]], 2)
+
+plot(yongsan.wgs, border = "Grey 50")
+plot(monthly.po, col = findColours(residual.class, orrd), add = TRUE,
+     pch = 19, cex = 1.25)
+axis(1, at = seq(x[1], x[3], by = ((x[3] - x[1]) / 4)), 
+     labels = parse(text = degreeLabelsEW(seq(x[1], x[3],
+                                              by = ((x[3] - x[1]) / 4)))))
+axis(2, at = seq(x[2], x[4], by = ((x[4] - x[2]) / 4)), 
+     labels = parse(text = degreeLabelsNS(seq(x[2], x[4], 
+                                              by = ((x[4] - x[2]) / 4)))))
+legend(126.938, 37.557, fill = orrd,
+       legend = c(paste("Less than", a[2]), paste(a[2], "-", a[3]), 
+                  paste(a[3], "-", a[4]), paste(a[4], "-", a[5]),
+                  paste(a[5], "-", a[6]), paste(a[6], "-", a[7]),
+                  paste("More than", a[7])),
+       title = "Residuals(OLS)", cex = 1.1, bty = "n")
+```
+
+## 2) Moran's I
+```{r}
+# tm
+tm <- CRS("+proj=utm +zone=51 +ellps=WGS84 +units=km")
+monthly.tm <- spTransform(monthly.po, tm)
+
+# distance
+coords.dists <- as.matrix(dist(as.data.frame(monthly.tm))) * 1000
+coords.dists.inv <- 1/coords.dists
+coords.dists.inv[is.infinite(coords.dists.inv) == TRUE] <- 0 # Inf
+diag(coords.dists.inv) <- 0
+coords.dists.inv.backup <- coords.dists.inv
+coords.dists.inv <- coords.dists.inv / sum(coords.dists.inv)
+
+# weights list object
+lw <- mat2listw(coords.dists.inv)
+
+# Moran's I
+moran.mc(linear.model$residuals, lw, 999)
+```
+
+## 3) Local G
+```{r}
+# calculation
+yongsan.localG <- localG(linear.model$residuals, lw)
+sig <- which(yongsan.localG >= 1.96)
+
+# visualization
+plot(yongsan.wgs, border = "Grey 50")
+plot(monthly.po[sig, ], col = "indianred", add = TRUE, pch = 19, cex = 1.25)
+axis(1, at = seq(x[1], x[3], by = ((x[3] - x[1]) / 4)), 
+     labels = parse(text = degreeLabelsEW(seq(x[1], x[3],
+                                              by = ((x[3] - x[1]) / 4)))))
+axis(2, at = seq(x[2], x[4], by = ((x[4] - x[2]) / 4)), 
+     labels = parse(text = degreeLabelsNS(seq(x[2], x[4], 
+                                              by = ((x[4] - x[2]) / 4)))))
+legend(126.938, 37.557, fill = "indianred",
+       legend = "z >= 1.96",
+       title = "Local G(OLS)", cex = 1.25, bty = "n")
+```
+
+# 3. Spatial Lag Model
+```{r}
+lag.model <- lagsarlm(mf, data = yongsan.df, lw, tol.solve = 1.0e-30)
+
+summary(lag.model)
+```
+
+## 1) Residuals(SLM)
+```{r}
+# variable
+yongsan.df$residuals.slm <- residuals(lag.model)
+
+# map visualization
+slm.class <- classIntervals(yongsan.df$residuals.slm, n = 7, style = "jenks")
+b <- round(slm.class[[2]], 2)
+
+plot(yongsan.wgs, border = "Grey 50")
+plot(monthly.po, col = findColours(slm.class, orrd), add = TRUE,
+     pch = 19, cex = 1.25)
+axis(1, at = seq(x[1], x[3], by = ((x[3] - x[1]) / 4)), 
+     labels = parse(text = degreeLabelsEW(seq(x[1], x[3],
+                                              by = ((x[3] - x[1]) / 4)))))
+axis(2, at = seq(x[2], x[4], by = ((x[4] - x[2]) / 4)), 
+     labels = parse(text = degreeLabelsNS(seq(x[2], x[4], 
+                                              by = ((x[4] - x[2]) / 4)))))
+legend(126.938, 37.557, fill = orrd,
+       legend = c(paste("Less than", b[2]), paste(b[2], "-", b[3]), 
+                  paste(b[3], "-", b[4]), paste(b[4], "-", b[5]),
+                  paste(b[5], "-", b[6]), paste(b[6], "-", b[7]),
+                  paste("More than", b[7])),
+       title = "Residuals(SLM)", cex = 1.1, bty = "n")
+```
+
+## 2) Moran's I
+```{r}
+moran.mc(residuals(lag.model), lw, 999)
+```
+
+## 3) Local G
+```{r}
+# calculation
+yongsan.localG.slm <- localG(residuals(lag.model), lw)
+sig.slm <- which(yongsan.localG.slm >= 1.96)
+
+# visualization
+plot(yongsan.wgs, border = "Grey 50")
+plot(monthly.po[sig.slm, ], col = "indianred", add = TRUE, pch = 19, cex = 1.25)
+axis(1, at = seq(x[1], x[3], by = ((x[3] - x[1]) / 4)), 
+     labels = parse(text = degreeLabelsEW(seq(x[1], x[3],
+                                              by = ((x[3] - x[1]) / 4)))))
+axis(2, at = seq(x[2], x[4], by = ((x[4] - x[2]) / 4)), 
+     labels = parse(text = degreeLabelsNS(seq(x[2], x[4], 
+                                              by = ((x[4] - x[2]) / 4)))))
+legend(126.938, 37.557, fill = "indianred",
+       legend = "z >= 1.96",
+       title = "Local G(SLM)", cex = 1.25, bty = "n")
+```
+
+# 3. Spatial error Model
+```{r}
+error.model <- errorsarlm(mf, data = yongsan.df, lw, tol.solve = 1.0e-30)
+
+summary(error.model)
+```
+
+## 1) Residuals(SEM)
+```{r}
+# variable
+yongsan.df$residuals.sem <- residuals(error.model)
+
+# map visualization
+sem.class <- classIntervals(yongsan.df$residuals.sem, n = 7, style = "jenks")
+c <- round(sem.class[[2]], 2)
+
+plot(yongsan.wgs, border = "Grey 50")
+plot(monthly.po, col = findColours(sem.class, orrd), add = TRUE,
+     pch = 19, cex = 1.25)
+axis(1, at = seq(x[1], x[3], by = ((x[3] - x[1]) / 4)), 
+     labels = parse(text = degreeLabelsEW(seq(x[1], x[3],
+                                              by = ((x[3] - x[1]) / 4)))))
+axis(2, at = seq(x[2], x[4], by = ((x[4] - x[2]) / 4)), 
+     labels = parse(text = degreeLabelsNS(seq(x[2], x[4], 
+                                              by = ((x[4] - x[2]) / 4)))))
+legend(126.938, 37.557, fill = orrd,
+       legend = c(paste("Less than", c[2]), paste(c[2], "-", c[3]), 
+                  paste(c[3], "-", c[4]), paste(c[4], "-", c[5]),
+                  paste(c[5], "-", c[6]), paste(c[6], "-", c[7]),
+                  paste("More than", c[7])),
+       title = "Residuals(SEM)", cex = 1.1, bty = "n")
+```
+
+## 2) Moran's I
+```{r}
+moran.mc(residuals(error.model), lw, 999)
+```
+
+## 3) Local G
+```{r}
+# calculation
+yongsan.localG.sem <- localG(residuals(error.model), lw)
+sig.sem <- which(yongsan.localG.sem >= 1.96)
+
+# visualization
+plot(yongsan.wgs, border = "Grey 50")
+plot(monthly.po[sig.sem, ], col = "indianred", add = TRUE, pch = 19, cex = 1.25)
+axis(1, at = seq(x[1], x[3], by = ((x[3] - x[1]) / 4)), 
+     labels = parse(text = degreeLabelsEW(seq(x[1], x[3],
+                                              by = ((x[3] - x[1]) / 4)))))
+axis(2, at = seq(x[2], x[4], by = ((x[4] - x[2]) / 4)), 
+     labels = parse(text = degreeLabelsNS(seq(x[2], x[4], 
+                                              by = ((x[4] - x[2]) / 4)))))
+legend(126.938, 37.557, fill = "indianred",
+       legend = "z >= 1.96",
+       title = "Local G(SEM)", cex = 1.25, bty = "n")
+```
