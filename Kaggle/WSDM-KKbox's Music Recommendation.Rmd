@@ -1,0 +1,458 @@
+---
+title: "WSDM"
+author: "Young Ho Lee"
+date: "2017.10.20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Basic Packages
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(gridExtra)
+library(xgboost)
+library(data.table)
+
+# Set Working Directory
+knitr::opts_chunk$set(root.dir = "D:/Kaggle/WSDM_KKBox's_Music/")
+```
+
+# 1. Data Import
+```{r}
+train <- fread("D:/Kaggle/WSDM_KKBox_Music/train.csv")
+test <- fread("D:/Kaggle/WSDM_KKBox_Music/test.csv")
+songs <- fread("D:/Kaggle/WSDM_KKBox_Music/songs.csv", encoding = "UTF-8")
+members <- fread("D:/Kaggle/WSDM_KKBox_Music/members.csv")
+song_extra <- fread("D:/Kaggle/WSDM_KKBox_Music/song_extra_info.csv", 
+                    encoding = "UTF-8")
+
+head(train)
+```
+
+# 2. Data Exploration(Column)
+```{r}
+# train
+unique(train$source_system_tab)
+unique(train$source_screen_name)
+unique(train$source_type)
+
+# songs
+length(unique(songs$artist_name))
+length(unique(songs$composer))
+length(unique(songs$lyricist))
+unique(songs$language)
+```
+
+# 3. Merge data
+## 1) Data & Songs
+```{r}
+# train
+tr.song <- merge(train, songs, by = "song_id", all.x = TRUE)
+
+# test
+te.song <- merge(test, songs, by = "song_id", all.x = TRUE)
+```
+
+## 2) Data & Extra
+```{r}
+# train
+tr.song.extra <- merge(tr.song, song_extra, by = "song_id", all.x = TRUE)
+
+# test
+te.song.extra <- merge(te.song, song_extra, by = "song_id", all.x = TRUE)
+```
+
+## 3) Data & Members
+```{r}
+# train
+tr.merge <- merge(tr.song.extra, members, by = "msno", all.x = TRUE)
+
+# test
+te.merge <- merge(te.song.extra, members, by = "msno", all.x = TRUE)
+
+head(tr.merge)
+str(tr.merge)
+summary(tr.merge)
+```
+
+# 4. Data Handling
+## 1) Blank
+```{r}
+# function
+blank.length <- function(data){
+  for(i in 1:length(data)){
+    print(paste0("[", i, "] ", length(data[[i]][which(data[[i]] == "")])))
+  }
+}
+
+# train
+blank.length(tr.merge)
+
+# test
+blank.length(te.merge)
+```
+
+```{r}
+#blank <- function(data){
+#  for(i in 1:length(data)){
+#    data[[i]][data[[i]] == ""] <- NA
+#    
+#    message("data[[", i, "]] is done!")
+#  }
+#}
+
+# train
+for(i in 1:length(tr.merge)){
+  tr.merge[[i]][tr.merge[[i]] == ""] <- NA
+    
+  message("tr.merge[[", i, "]] is done!")
+}
+
+# test
+for(i in 1:length(te.merge)){
+  te.merge[[i]][te.merge[[i]] == ""] <- NA
+    
+  message("te.merge[[", i, "]] is done!")
+}
+```
+
+## 2) Source
+```{r}
+# train
+for(i in 3:5){
+  tr.merge[[i]][is.na(tr.merge[[i]]) == TRUE] <- "Unknown"
+}
+
+
+# test
+for(i in 4:6){
+  te.merge[[i]][is.na(te.merge[[i]]) == TRUE] <- "Unknown"
+}
+```
+
+## 3) Age
+```{r}
+# train
+tr.merge[["bd"]][tr.merge$bd <= 0 | tr.merge$bd > 95] <- 
+  mean(tr.merge[["bd"]][tr.merge$bd > 0 & tr.merge$bd <= 95])
+
+# test
+te.merge[["bd"]][te.merge$bd <= 0 | te.merge$bd > 95] <- 
+  mean(te.merge[["bd"]][te.merge$bd > 0 & te.merge$bd <= 95])
+```
+
+## 4) Date Difference
+```{r}
+# function
+date.diff <- function(data){
+  data %>%
+    mutate(registration_init_time = as.character(registration_init_time),
+           expiration_date = as.character(expiration_date),
+           registration = paste(substring(registration_init_time, 1, 4),
+                                substring(registration_init_time, 5, 6),
+                                substring(registration_init_time, 7, 8),
+                                sep = "-"),
+           expiration = paste(substring(expiration_date, 1, 4),
+                              substring(expiration_date, 5, 6),
+                              substring(expiration_date, 7, 8),
+                              sep = "-"),
+           dateDiff = as.numeric(as.Date(expiration) - as.Date(registration))) %>%
+    dplyr::select(-c(registration_init_time, expiration_date, registration, 
+                     expiration))
+}
+
+# train
+tr.diff <- date.diff(tr.merge)
+
+# test
+te.diff <- date.diff(te.merge)
+```
+
+## 5) Gender
+```{r}
+# train
+table(tr.diff$gender)
+
+uva <- c(2118316, 2297623) # female, male
+f <- round(uva/sum(uva),2)[1] # female ratio
+m <- round(uva/sum(uva),2)[2] # male ratio
+tr.diff[is.na(tr.diff$gender), "gender"] <- sample(c("female","male"), 
+                                                   length(tr.diff[is.na(tr.diff$gender), 
+                                                                  "gender"]), 
+                                                   replace = TRUE, 
+                                                   prob = c(f, m))
+
+# test
+table(te.diff$gender)
+
+uva <- c(736114, 768452) # female, male
+f <- round(uva/sum(uva),2)[1] # female ratio
+m <- round(uva/sum(uva),2)[2] # male ratio
+te.diff[is.na(te.diff$gender), "gender"] <- sample(c("female","male"), 
+                                                   length(te.diff[is.na(te.diff$gender), 
+                                                                  "gender"]), 
+                                                   replace = TRUE, 
+                                                   prob = c(f, m))
+```
+
+```{r}
+tr.diff <- tr.diff %>%
+  dplyr::select(-c(lyricist, name, isrc))
+
+te.diff <- te.diff %>%
+  dplyr::select(-c(lyricist, name, isrc))
+```
+
+## 6) Artist names
+```{r}
+# Interpolaion
+## train
+tr.diff[is.na(tr.diff$artist_name) == TRUE, "artist_name"] <- "Unknown"
+
+## test
+te.diff[is.na(te.diff$artist_name) == TRUE, "artist_name"] <- "Unknown"
+
+artist.name <- tr.diff %>%
+    group_by(artist_name) %>%
+    summarise(countTarget = sum(target),
+              countArtist = n()) %>%
+    mutate(artistRatio = round(countTarget/countArtist, digits = 2)) %>%
+    filter(countArtist >= 3) %>%
+    arrange(-artistRatio)
+
+artist.name <- artist.name[, c(1, 4)]
+```
+
+## 7) Composer
+```{r}
+# Interpolaion
+## train
+tr.diff[is.na(tr.diff$composer) == TRUE, "composer"] <- 
+  tr.diff[is.na(tr.diff$composer) == TRUE, "artist_name"]
+
+## test
+te.diff[is.na(te.diff$composer) == TRUE, "composer"] <- 
+  te.diff[is.na(te.diff$composer) == TRUE, "artist_name"]
+
+# Composer ratio column 
+composer <- tr.diff %>%
+    group_by(composer) %>%
+    summarise(countTarget = sum(target),
+              countComposer = n()) %>%
+    mutate(composerRatio = round(countTarget/countComposer, digits = 2)) %>%
+    filter(countComposer >= 3) %>%
+    arrange(-composerRatio)
+
+composer <- composer[, c(1, 4)]
+
+write.csv(composer, "composer.csv", row.names = FALSE)
+```
+
+## 8) Genre
+```{r}
+# Interpolaion
+## train
+tr.diff[is.na(tr.diff$genre_ids) == TRUE, "genre_ids"] <- "Unknown"
+
+## test
+te.diff[is.na(te.diff$genre_ids) == TRUE, "genre_ids"] <- "Unknown"
+
+genre.ratio <- tr.diff %>%
+    group_by(genre_ids) %>%
+    summarise(countTarget = sum(target),
+              countGenre = n()) %>%
+    mutate(genreRatio = round(countTarget/countGenre, digits = 2)) %>%
+    filter(countGenre >= 3) %>%
+    arrange(-genreRatio)
+genre.ratio <- genre.ratio[, c(1, 4)]
+
+genre.frequency <- tr.diff %>%
+  group_by(genre_ids) %>%
+  summarise(countGenre = n())
+
+write.csv(genre.ratio, "genre.ratio.csv", row.names = FALSE)
+write.csv(genre.frequency, "genre.frequency.csv", row.names = FALSE)
+```
+
+## 9) NA
+```{r}
+na.length <- function(data){
+  for(i in 1:length(data)){
+    print(paste0("[", i, "] ", length(data[[i]][which(is.na(data[[i]]) == TRUE)])))
+  }
+}
+
+# train
+na.length(tr.diff)
+
+# test
+na.length(te.diff)
+
+## Song Length
+te.diff[is.na(te.diff$song_length) == TRUE, "song_length"] <- 
+  mean(tr.diff$song_length[is.na(tr.diff$song_length) == FALSE])
+
+## Language
+tr.diff %>%
+  group_by(language) %>%
+  summarise(count = n()) %>%
+  arrange(-count)
+
+te.diff[is.na(te.diff$language) == TRUE, "language"] <- 3
+```
+
+## 10) Final merge
+```{r}
+# Memory
+tr.diff <- tr.diff[complete.cases(tr.diff) == TRUE, ]
+
+set.seed(1234)
+tr.index <- sample(x = 1:nrow(tr.diff), size = 0.4 * nrow(tr.diff))
+
+tr.diff <- tr.diff[tr.index, ]
+
+rm(song_extra, songs, te.merge, te.song, te.song.extra, test, tr.merge,
+   tr.song, tr.song.extra, train, members)
+gc()
+
+# artist.name
+set.seed(1234)
+split.index <- sample(x = 1:nrow(tr.diff), size = 0.5 * nrow(tr.diff))
+
+tr.diff1 <- tr.diff[split.index, ]
+tr.diff2 <- tr.diff[-split.index, ]
+
+rm(tr.diff)
+
+train1 <- merge(tr.diff1, artist.name, by = "artist_name", all.x = TRUE)
+train2 <- merge(tr.diff2, artist.name, by = "artist_name", all.x = TRUE)
+train_m <- rbind(train1, train2)
+train_m[is.na(train_m$artistRatio) == TRUE, "artistRatio"] <- 0.8
+
+test_m <- merge(te.diff, artist.name, by = "artist_name", all.x = TRUE)
+
+test_m[is.na(test_m$artistRatio) == TRUE, "artistRatio"] <- 0.8
+
+# save
+write.csv(train_m, "train_m.csv", row.names = FALSE)
+write.csv(test_m, "test_m.csv", row.names = FALSE)
+```
+
+# 5. Data Handling2
+```{r}
+# Data import
+train_m <- fread("D:/Kaggle/WSDM_KKBox_Music/train_m.csv")
+test_m <- fread("D:/Kaggle/WSDM_KKBox_Music/test_m.csv")
+composer <- read.csv("D:/Kaggle/WSDM_KKBox_Music/composer.csv")
+genre.frequency <- read.csv("D:/Kaggle/WSDM_KKBox_Music/genre.frequency.csv")
+genre.ratio <- read.csv("D:/Kaggle/WSDM_KKBox_Music/genre.ratio.csv")
+sample.submission <- read.csv("D:/Kaggle/WSDM_KKBox_Music/sample_submission.csv")
+```
+
+## 1) Composer
+```{r}
+# train
+train_m <- merge(train_m, composer, by = "composer", all.x = TRUE)
+train_m[is.na(train_m$composerRatio) == TRUE, "composerRatio"] <- 0.8
+
+# test
+test_m <- merge(test_m, composer, by = "composer", all.x = TRUE)
+test_m[is.na(test_m$composerRatio) == TRUE, "composerRatio"] <- 0.8
+```
+
+## 2) Genre
+```{r}
+# train
+train_m <- merge(train_m, genre.ratio, by = "genre_ids", all.x = TRUE)
+train_m[is.na(train_m$genreRatio) == TRUE, "genreRatio"] <- 
+  mean(train_m[[19]][is.na(train_m$genreRatio) == FALSE])
+
+train_m <- merge(train_m, genre.frequency, by = "genre_ids", all.x = TRUE)
+
+# test
+test_m <- merge(test_m, genre.ratio, by = "genre_ids", all.x = TRUE)
+test_m[is.na(test_m$genreRatio) == TRUE, "genreRatio"] <- 
+  mean(train_m[[19]][is.na(train_m$genreRatio) == FALSE])
+
+test_m <- merge(test_m, genre.frequency, by = "genre_ids", all.x = TRUE)
+test_m[is.na(test_m$countGenre) == TRUE, "countGenre"] <-
+  median(train_m[[20]][is.na(train_m$countGenre) == FALSE])
+```
+
+## 3) Final
+```{r}
+# train
+train_final <- train_m %>%
+  select(-c(genre_ids, composer, artist_name, msno, song_id, countGenre))
+
+set.seed(1234)
+train.index <- sample(x = 1:nrow(train_final), size = 0.3 * nrow(train_final))
+
+train_final <- train_final[train.index, ]
+
+x <- c(1:3, 6, 7, 9, 10)
+for(i in x){
+  train_final[[i]] <- as.factor(train_final[[i]])
+}
+
+# test
+test_m <- test_m[!duplicated(test_m$id), ]
+
+test_final <- test_m %>%
+  arrange(id) %>%
+  select(-c(genre_ids, composer, artist_name, msno, song_id, id, countGenre))
+
+test_final$target <- rep(0:1, 1278395)
+
+y <- c(1:3, 5, 6, 8, 9)
+for(i in y){
+  test_final[[i]] <- as.factor(test_final[[i]])
+}
+
+# rm(train_m, test_m)
+```
+
+# 6. Modeling
+```{r}
+trainLabel <- train_final$target
+
+trainMat <- model.matrix(target ~ ., data = train_final)
+testMat <- model.matrix(target ~ ., data = test_final)
+```
+
+```{r}
+params <- list(eta = 0.3, max.depth = 5,
+               gamma = 0, colsample_bytree = 1,
+               subsample = 1,
+               objective = "binary:logistic",
+               eval_metric = "auc")
+
+set.seed(1234)
+xgbcv <- xgb.cv(params = params,
+                nrounds = 150,
+                nfold = 10,
+                metrics = "auc",
+                data = trainMat,
+                label = trainLabel,  
+                verbose = 0)
+
+xgb.best <- arrange(xgbcv$evaluation_log, desc(test_auc_mean))[1, ] 
+xgb.best
+```
+
+```{r}
+set.seed(1234)
+kkbox_xgboost <- xgboost(params = params,
+                         data = trainMat,
+                         label = trainLabel,
+                         nrounds = 150,
+                         verbose = 1)
+# xgb.best$iter
+xgb_pred <- predict(kkbox_xgboost, testMat)
+summary(xgb_pred)
+
+submission <- data.frame(id = sample.submission$id, target = xgb_pred)
+write.csv(submission, "submission6.csv", row.names = FALSE)
+```
+
