@@ -10,11 +10,13 @@
 
 
 ## Peer-reviewed Journal Articles
-1. Lee, Y., __Lee, Y.__, Seong, J. Stanescu, A., Ji, S., & Hwang, C. S. (2020). An Analysis of the latest Trends and Topics in Geography Research Using Topic Modeling. Journal of the Korean Geographical Society, 55(6), 589-599.
-2.	__Lee, Y.__, Lee, Y., Seong, J. Stanescu, A., & Hwang, C. S. (2020). A Comparison of Network Clustering Algorithms in Keyword Network Analysis: A Case Study with Geography Conference Presentations. International Journal of Geospatial and Environmental Research, 7(3), 1.
-3.	Lee, Y., __Lee, Y.__, Seong, J. Stanescu, A., Hwang, T., & Hwang, C. S. (2019). Analysis of GIS Research Trends in the U.S. with AAG Conference Presentations from 2000-2019. The Geographical Journal of Korea, 53(4), 495-508.
-4.	__Lee, Y.__, & Hong, S.-Y. (2019). A machine learning approach to the prediction of individual travel mode choices. Journal of the Korean Data & Information Science Society, 30(5), 1011-1024.
-5.	Oh, J., __Lee, Y.__, Jeong, Y., & Hong, S.-Y. (2019). An analysis of the National Household Travel Survey data for exploring spatial segregation of income groups. Journal of Transport Research, 26(1), 17-29.
+1. Seong, J., Hwang, C. S., Stanescu, A., __Lee, Y.__, & Lee, Y. (2022). What Geographers Research: An Analysis of Geography Topics, Clusters, and Trends Using a Keyword Network Analysis Approach and the 2000-2019 AAG Conference Presentations. International Journal of Geospatial and Environmental Research, 9(1), 1.
+2. Cho, Y., Park, J.-K., __Lee, Y.__, Choi, Y., & Chi, S.-H. (2021). Practical Geopolitics of President’s Visits to Frontline Military Units. The Geographical Journal of Korea, 55(2), 215-229.
+3. Lee, Y., __Lee, Y.__, Seong, J., Stanescu, A., Ji, S., & Hwang, C. S. (2020). An Analysis of the latest Trends and Topics in Geography Research Using Topic Modeling. Journal of the Korean Geographical Society, 55(6), 589-599.
+4.	__Lee, Y.__, Lee, Y., Seong, J., Stanescu, A., & Hwang, C. S. (2020). A Comparison of Network Clustering Algorithms in Keyword Network Analysis: A Case Study with Geography Conference Presentations. International Journal of Geospatial and Environmental Research, 7(3), 1.
+5.	Lee, Y., __Lee, Y.__, Seong, J., Stanescu, A., Hwang, T., & Hwang, C. S. (2019). Analysis of GIS Research Trends in the U.S. with AAG Conference Presentations from 2000-2019. The Geographical Journal of Korea, 53(4), 495-508.
+6.	__Lee, Y.__, & Hong, S.-Y. (2019). A machine learning approach to the prediction of individual travel mode choices. Journal of the Korean Data & Information Science Society, 30(5), 1011-1024.
+7.	Oh, J., __Lee, Y.__, Jeong, Y., & Hong, S.-Y. (2019). An analysis of the National Household Travel Survey data for exploring spatial segregation of income groups. Journal of Transport Research, 26(1), 17-29.
 
 ## Proceedings and Posters of Conference
 1.	__Lee, Y.__, Lee, Y., Stanescu, A., & Seong, J. (2019). Summarizing the 2019 AAG conference presentations using keyword network analysis. In: The 74th Annual Meeting of the Southeastern Division of the American Association of Geographers (SEDAAG 2019). Wilmington, NC. (Poster)
