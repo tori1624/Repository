@@ -1,5 +1,4 @@
-* 2022/04/08
-### 기울기 소실 문제 (Vanishing Gradient Problem)
+#### 기울기 소실 문제 (Vanishing Gradient Problem)
 - 가중치를 Back Propagation으로 학습시키는 과정에서 곡선의 기울기가 0이 되는 문제
 - Sigmoid 함수의 경우, 미분값이 0 ~ 0.25 사이로 계속해서 가중치가 감소하는 문제가 발생
 - 이러한 기울기 소실 문제의 해결 방안으로 최근에는 Relu를 사용
