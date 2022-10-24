@@ -7,28 +7,31 @@
   <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script type="text/babel">
-    function App() {
-      function Btn({text, bool}) {
-        return <button 
+    function Btn({text, changeClick}) {
+      console.log(text, " was rendered");
+      return (
+        <button
+          onClick={changeClick}
           style={{
-          backgroundColor: "tomato",
-          color: "white",
-          padding: "10px 20px",
-          border: 0,
-          borderRadius: 10,
-          fontSize: bool ? 18 : 16,
+            backgroundColor: "tomato",
+            color: "white",
+            padding: "10px 20px",
+            border: 0,
+            borderRadius: 10,
           }}
         >
           {text}
-        </button>;
-      }
-      function Confirm() {
-        return <button>Confirm</button>;
-      }
+        </button>
+      );
+    }
+    const MemorizedBtn = React.memo(Btn); 
+    function App() {
+      const [value, setValue] = React.useState("Save Changes");
+      const changeValue = () => setValue("Revert Changes");
       return (
         <div>
-          <Btn text="Save Changes" bool={true}/>
-          <Btn text="Confirm" bool={false}/>
+          <MemorizedBtn text={value} changeClick={changeValue} />
+          <MemorizedBtn text="Continue" />
         </div>
       );
     }
