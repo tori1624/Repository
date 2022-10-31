@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 function App() {
   const [loading, setLoading] = useState(true);
   const [coins, setCoins] = useState([]);
-  const [balance, setBalance] = useState(0);
   useEffect (() => {
     fetch("https://api.coinpaprika.com/v1/tickers?limit=100")
       .then((response) => response.json())
