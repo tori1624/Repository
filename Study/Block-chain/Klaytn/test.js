@@ -1,3 +1,6 @@
+// 1. npm 설치
+// 2. caver-js 설치
+
 const Caver = require('caver-js')
 const caver = new Caver('https://public-node-api.klaytnapi.com/v1/cypress')
 
