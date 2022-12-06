@@ -15,4 +15,38 @@ async function testFunction() {
   })
 }
 
-testFunction()
+async function testFunction2() {
+  caver.rpc.klay.getLogs({
+    fromBlock: 108406066,
+    toBlock: "latest",
+    address: "0x1f2d6282d74ef26eb6c7e28b9e7048c1b42ebda5"
+  }).then((response1) => {
+    const hash = response1[0].transactionHash;
+    caver.rpc.klay.getTransactionByHash(hash).then((response2) => {
+      //const amount = caver.utils.convertFromPeb(caver.utils.hexToNumberString(response2.value));
+      const result = caver.abi.decodeFunctionCall({
+        name: 'buy',
+        type: 'function',
+        inputs: [{
+          type: 'address',
+          name: 'NFT'
+        },{
+          type: 'uint256',
+          name: 'TokenID'
+        },{
+          type: 'uint256',
+          name: 'amount'
+        }]
+      }, response2.input);
+      const nftInstance = new caver.klay.KIP17(result.NFT);
+      const nftName = nftInstance.name().then(console.log);
+      const amount = caver.utils.convertFromPeb(result.amount);
+      console.log(`NFT Name: ${nftName}`);
+      console.log(`TokenID: #${result.TokenID}`);
+      console.log(`Price: ${amount} klay`);
+    });
+  })
+}
+
+//testFunction()
+testFunction2()
