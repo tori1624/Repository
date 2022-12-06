@@ -17,7 +17,7 @@ async function testFunction() {
 
 async function testFunction2() {
   caver.rpc.klay.getLogs({
-    fromBlock: 108406066,
+    fromBlock: 108426270,
     toBlock: "latest", 
     address: "0x1f2d6282d74ef26eb6c7e28b9e7048c1b42ebda5" // pKLAY contract
   }).then((response1) => {
