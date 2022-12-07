@@ -6,19 +6,17 @@ const Caver = require('caver-js')
 const caver = new Caver('https://public-node-api.klaytnapi.com/v1/cypress')
 
 async function testFunction() {
+  // Set Address
+  const tokenAddress = "0x1f2d6282d74ef26eb6c7e28b9e7048c1b42ebda5"; // pKLAY contract
+  
   // Get Recent Block Number
-  const recentBn = caver.rpc.klay.getBlockNumber().then(async (bn) => {
-    const recent = await caver.utils.hexToNumber(bn);
-    return recent;
-  });
-
-  recentBn.then(console.log);
+  caver.klay.getBlockNumber().then(console.log);
   
   // Get PalaSquare Transcation Information
   caver.rpc.klay.getLogs({
     fromBlock: 108426270,
     toBlock: "latest", 
-    address: "0x1f2d6282d74ef26eb6c7e28b9e7048c1b42ebda5" // pKLAY contract
+    address: tokenAddress
   }).then((response1) => {
     const hash = response1[0].transactionHash;
     
