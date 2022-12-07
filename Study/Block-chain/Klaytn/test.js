@@ -9,8 +9,10 @@ async function testFunction() {
   // Get Recent Block Number
   const recentBn = caver.rpc.klay.getBlockNumber().then(async (bn) => {
     const recent = await caver.utils.hexToNumber(bn);
-    console.log(recent);
+    return recent;
   });
+
+  recentBn.then(console.log);
   
   // Get PalaSquare Transcation Information
   caver.rpc.klay.getLogs({
