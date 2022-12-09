@@ -10,7 +10,8 @@ async function testFunction() {
   const tokenAddress = "0x1f2d6282d74ef26eb6c7e28b9e7048c1b42ebda5"; // pKLAY contract
   
   // Get Recent Block Number
-  caver.klay.getBlockNumber().then(console.log);
+  const test = await caver.klay.getBlockNumber(); // promise problem - https://dadidadi.tistory.com/m/42
+  console.log(test);
   
   // Get PalaSquare Transcation Information
   caver.rpc.klay.getLogs({
@@ -20,7 +21,7 @@ async function testFunction() {
   }).then((response1) => {
     const hash = response1[0].transactionHash;
     
-    caver.rpc.klay.getTransactionByHash(hash).then((response2) => {
+    caver.rpc.klay.getTransactionByHash(hash).then(async (response2) => {
       //const amount = caver.utils.convertFromPeb(caver.utils.hexToNumberString(response2.value));
       const result = caver.abi.decodeFunctionCall({
         name: 'buy',
@@ -38,14 +39,14 @@ async function testFunction() {
       }, response2.input);
       
       const nftInstance = new caver.klay.KIP17(result.NFT);
-      const nftName = nftInstance.name();
-      const nftURI = nftInstance.tokenURI(result.TokenID);
+      const nftName = await nftInstance.name();
+      const nftURI = await nftInstance.tokenURI(result.TokenID);
       const amount = caver.utils.convertFromPeb(result.amount);
       
-      nftName.then((nft) => console.log(`NFT Name: ${nft}`));
-      nftURI.then((uri) => console.log(`TokenURI: ${uri}`));
+      console.log(`NFT Name: ${nftName}`);
       console.log(`TokenID: #${result.TokenID}`);
       console.log(`Price: ${amount} klay`);
+      console.log(`TokenURI: ${nftURI}`);
     });
   })
 }
