@@ -15,14 +15,21 @@ async function testFunction() {
   
   // Get PalaSquare Transcation Information
   caver.rpc.klay.getLogs({
-    fromBlock: 108426270,
-    toBlock: "latest", 
+    fromBlock: 108927871,
+    toBlock: "latest",
     address: tokenAddress
   }).then((response1) => {
-    const hash = response1[0].transactionHash;
+    // Get non-duplicate Transaction Hash
+    const transactionHash = new Set();
+
+    for (let i = 0; i < response1.length; i++) {
+      transactionHash.add(response1[i].transactionHash);
+    }
+
+    const hash = Array.from(transactionHash);
     
-    caver.rpc.klay.getTransactionByHash(hash).then(async (response2) => {
-      //const amount = caver.utils.convertFromPeb(caver.utils.hexToNumberString(response2.value));
+    // 반복문 시작할 때 response2.to != pklay address인 것만 추출
+    caver.rpc.klay.getTransactionByHash(hash[0]).then(async (response2) => {
       const result = caver.abi.decodeFunctionCall({
         name: 'buy',
         type: 'function',
