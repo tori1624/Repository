@@ -4,7 +4,17 @@
 // https://www.klaytnapi.com/ko/resource/openapi/node/reference/overview/#section/Introduction
 
 const Caver = require('caver-js')
-const caver = new Caver('https://public-node-api.klaytnapi.com/v1/cypress')
+const accessKeyId = "";
+const secretAccessKey = "";
+
+const option = {
+  headers: [
+    {name: 'Authorization', value: 'Basic ' + Buffer.from(accessKeyId + ':' + secretAccessKey).toString('base64')},
+    {name: 'x-chain-id', value: '8217'},
+  ]
+}
+
+const caver = new Caver(new Caver.providers.HttpProvider("https://node-api.klaytnapi.com/v1/klaytn", option))
 
 async function testFunction() {
   // Set Address
@@ -16,7 +26,7 @@ async function testFunction() {
   
   // Get PalaSquare Transcation Information
   caver.rpc.klay.getLogs({
-    fromBlock: 108939177,
+    fromBlock: 109005493,
     toBlock: "latest",
     address: tokenAddress
   }).then((response1) => {
@@ -51,11 +61,18 @@ async function testFunction() {
           const nftName = await nftInstance.name();
           const nftURI = await nftInstance.tokenURI(result.TokenID);
           const amount = caver.utils.convertFromPeb(result.amount);
+          const blockNb = caver.utils.hexToNumber(response2.blockNumber);
+          const date = await caver.klay.getBlock(blockNb).then((response3) => {
+            const result = new Date(caver.utils.hexToNumber(response3.timestamp)*1000);
+            return result;
+          })
           
           console.log(`NFT Name: ${nftName}`);
           console.log(`TokenID: #${result.TokenID}`);
           console.log(`Price: ${amount} klay`);
           console.log(`TokenURI: ${nftURI}`);
+          console.log(`Block Number: ${blockNb}`);
+          console.log(`Timestamp: ${date}`);
         }
       });
     }
