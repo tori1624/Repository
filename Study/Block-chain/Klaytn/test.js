@@ -1,5 +1,3 @@
-// 1. npm 설치
-// 2. caver-js 설치
 // get balance - https://imeom.tistory.com/148
 // https://www.klaytnapi.com/ko/resource/openapi/node/reference/overview/#section/Introduction
 
@@ -26,8 +24,8 @@ async function testFunction() {
   
   // Get PalaSquare Transcation Information
   caver.rpc.klay.getLogs({
-    fromBlock: 109005493,
-    toBlock: "latest",
+    fromBlock: 109180253,
+    toBlock: 109182471, //"latest"
     address: tokenAddress
   }).then((response1) => {
     // Get non-duplicate Transaction Hash
@@ -41,7 +39,7 @@ async function testFunction() {
     
     for (let i = 0; i < hash.length; i++) {
       caver.rpc.klay.getTransactionByHash(hash[i]).then(async (response2) => {
-        if (response2.input.substr(0, 10) == '0xa59ac6dd') {
+        if (response2.input.substr(0, 10) == '0xa59ac6dd') { // 'buy' MethodSig
           const result = caver.abi.decodeFunctionCall({
             name: 'buy',
             type: 'function',
@@ -73,6 +71,9 @@ async function testFunction() {
           console.log(`TokenURI: ${nftURI}`);
           console.log(`Block Number: ${blockNb}`);
           console.log(`Timestamp: ${date}`);
+
+          const tmpArr = [nftName, result.TokenID, amount, nftURI, blockNb, date];
+          console.log(tmpArr);
         }
       });
     }
