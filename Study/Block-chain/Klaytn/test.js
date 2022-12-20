@@ -24,8 +24,8 @@ async function testFunction() {
   
   // Get PalaSquare Transcation Information
   caver.rpc.klay.getLogs({
-    fromBlock: 109180253,
-    toBlock: 109182471, //"latest"
+    fromBlock: 109608074,
+    toBlock: 109608074, //"latest"
     address: tokenAddress
   }).then((response1) => {
     // Get non-duplicate Transaction Hash
@@ -55,15 +55,13 @@ async function testFunction() {
             }]
           }, response2.input);
           
-          const nftInstance = new caver.klay.KIP17(result.NFT);
-          const nftName = await nftInstance.name();
-          const nftURI = await nftInstance.tokenURI(result.TokenID);
+          const tmpNftInstance = new caver.klay.KIP17(result.NFT);
+          const nftName = await tmpNftInstance.name();
+          const nftURI = await tmpNftInstance.tokenURI(result.TokenID);
           const amount = caver.utils.convertFromPeb(result.amount);
           const blockNb = caver.utils.hexToNumber(response2.blockNumber);
-          const date = await caver.klay.getBlock(blockNb).then((response3) => {
-            const result = new Date(caver.utils.hexToNumber(response3.timestamp)*1000);
-            return result;
-          })
+          const tmpDate = await caver.klay.getBlock(blockNb);
+          const date = new Date(caver.utils.hexToNumber(tmpDate.timestamp)*1000);
           
           console.log(`NFT Name: ${nftName}`);
           console.log(`TokenID: #${result.TokenID}`);
