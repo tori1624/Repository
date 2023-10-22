@@ -46,13 +46,13 @@ with models.DAG(
         start  = DummyOperator(task_id = 'start')
         end    = DummyOperator(task_id = 'end')
 
-        preprocess_1 = SSHOperator(task_id = 'new_wekl_bsc_ckup',
+        preprocess_1 = SSHOperator(task_id = 'preprocess_1',
                              command     = f'{python_exec} {base_path}/preprocess/preprocess_inference_ods.py',
                              cmd_timeout = 600,
                              ssh_hook    = ssh_hook,
                              get_pty     = True)
 
-        preprocess_2 = SSHOperator(task_id = 'dw_preprocess',
+        preprocess_2 = SSHOperator(task_id = 'preprocess_2',
                              command     = f'{python_exec} {base_path}/preprocess/preprocess_inference_dw.py',
                              cmd_timeout = 600,
                              ssh_hook    = ssh_hook,
