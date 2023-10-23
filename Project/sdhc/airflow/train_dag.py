@@ -58,6 +58,12 @@ with models.DAG(
                              ssh_hook    = ssh_hook,
                              get_pty     = True)
 
+        hpo = SSHOperator(task_id = 'hpo',
+                             command     = f'{python_exec} {base_path}/train/hpo.py --cate={cate}',
+                             cmd_timeout = 7200,
+                             ssh_hook    = ssh_hook,
+                             get_pty     = True)
+
         train = SSHOperator(task_id = 'train',
                              command     = f'{python_exec} {base_path}/train/train.py --cate={cate}',
                              cmd_timeout = 3600,
@@ -71,4 +77,4 @@ with models.DAG(
                              get_pty     = True)
 
 
-        start >> preprocess_1 >> preprocess_2 >> train >> preprocess_check >> end
+        start >> preprocess_1 >> preprocess_2 >> hpo >> train >> preprocess_check >> end
