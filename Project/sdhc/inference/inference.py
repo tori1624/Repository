@@ -38,7 +38,7 @@ now = datetime.datetime.now()
 
 
 # 0. logger 생성
-lg = Logger('emr')
+lg = Logger({cate})
 logger = lg.make_logger('inference')
 
 
