@@ -77,7 +77,7 @@ def hpo(cate):
 
 
     # 3. 데이터 불러오기
-    #logger.info('# import data')
+    logger.info('# import data')
     hpo_df = pd.read_csv(os.path.join(data_path, filename))
     hpo_df_X = hpo_df.drop(rmv_clmn, axis=1)
     hpo_df_Y = hpo_df[f'ftr_{cate}_yn']
@@ -127,6 +127,8 @@ def hpo(cate):
     all_dropout_rate = []
 
     #  4) 랜덤서치 50번 반복
+    logger.info('# random search start')
+    
     for i in range(1, 51):
         print('['+str(i)+'번째 랜덤서치]')
 
@@ -153,6 +155,8 @@ def hpo(cate):
     all_list = [all_batch_size, all_decay_rate, all_decay_steps, all_initial_learning_rate,
                 all_unit_size, all_dropout_rate]
 
+    logger.info('# random search end')
+
     #  5) 랜덤서치로 찾은 각 HP의 MIN,MAX 값 리스트로 저장
     all_min = list(map(min, all_list))
     all_max = list(map(max, all_list))
@@ -178,13 +182,17 @@ def hpo(cate):
         kfold = StratifiedKFold(n_splits=2, shuffle=True)
         score = cross_val_score(nn, hpo_df_X, hpo_df_Y, scoring='accuracy', cv=kfold).mean()
         return score
-
+    
     #  3) Create the Bayesian OptimizatiSon object
+    logger.info('# bayesian optimizatiSon start')
+    
     bo = BayesianOptimization(f=optimize_model, pbounds=params, random_state=42)
 
     #  4) Run the optimization
     bo.maximize(init_points=10, n_iter=15)
     bo.max
+
+    logger.info('# bayesian optimizatiSon end')
     
     #  5) HPO 결과 확인
     print('BO_PARAMS :', params)
