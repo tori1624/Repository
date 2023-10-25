@@ -106,7 +106,7 @@ def train_mlflow(cate, run_name, cut_off):
     ## Over Sampling 적용
     # sm = SMOTE(sampling_strategy=0.1)
     # train_X, train_Y = sm.fit_resample(train_X_raw, train_Y_raw)
-    adasyn = ADASYN(random_state=42)
+    adasyn = ADASYN(sampling_strategy=0.1, random_state=42)
     train_X, train_Y = adasyn.fit_resample(train_X_raw, train_Y_raw)
 
     val_X = val.drop(rmv_clmn, axis=1)
