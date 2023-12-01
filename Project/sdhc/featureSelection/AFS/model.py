@@ -3,8 +3,11 @@
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
+import numpy as np
+from utils import BatchCreate
+
 # parameter
-input_size = 891
+input_size = 889
 output_size = 1
 E_node = 32
 A_node = 2
@@ -13,30 +16,11 @@ L_node = 500
 moving_average_decay = 0.99
 
 regularization_rate = 0.0001
-learning_rate_base = 0.8
+learning_rate_base = 0.01
 learning_rate_decay = 0.99
 batch_size = 1024
 train_step = 2000
 
-# binary focal loss
-def binary_focal_loss(y_true, y_pred, gamma=2.0, alpha=0.25):
-    """
-    Binary Focal Loss 구현
-    :param y_true: 실제 레이블 (0 또는 1)
-    :param y_pred: 모델의 예측 확률 (0에서 1 사이)
-    :param gamma: Focal Loss의 감마 값 (기본값: 2.0)
-    :param alpha: Focal Loss의 알파 값 (기본값: 0.25)
-    :return: Binary Focal Loss
-    """
-    y_pred = tf.clip_by_value(y_pred, 1e-7, 1.0 - 1e-7)  # 예측 값을 안전하게 클리핑
-
-    # Binary Cross Entropy Loss 계산
-    bce_loss = - (y_true * tf.log(y_pred) + (1.0 - y_true) * tf.log(1.0 - y_pred))
-
-    # Focal Loss 계산
-    focal_loss = alpha * tf.pow(1.0 - y_pred, gamma) * bce_loss
-
-    return tf.reduce_mean(focal_loss)
 
 # implementation
 def build(total_batch):
@@ -79,10 +63,10 @@ def build(total_batch):
         variable_averages = tf.train.ExponentialMovingAverage(moving_average_decay, global_step)
         variable_averages_op = variable_averages.apply(tf.trainable_variables())
         L_FC = tf.nn.relu(tf.matmul(G, L_W1) + L_b1)
-        O = tf.matmul(L_FC, L_W2) + L_b2
+        O = tf.nn.sigmoid(tf.matmul(L_FC, L_W2) + L_b2)
 
         average_L_FC = tf.nn.relu(tf.matmul(G, variable_averages.average(L_W1)) + variable_averages.average(L_b1))
-        average_O = tf.matmul(average_L_FC, variable_averages.average(L_W2)) + variable_averages.average(L_b2)
+        average_O = tf.nn.sigmoid(tf.matmul(average_L_FC, variable_averages.average(L_W2)) + variable_averages.average(L_b2))
 
     with tf.name_scope("Loss") as scope:
         regularizer = tf.keras.regularizers.L2(regularization_rate)
@@ -90,16 +74,18 @@ def build(total_batch):
 
         learning_rate = tf.train.exponential_decay(learning_rate_base, global_step, total_batch, learning_rate_decay)
 
-        focal_loss = binary_focal_loss(Y, O)
-        loss = tf.reduce_mean(focal_loss) + regularization
+        cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=O, labels=Y)
+        cross_entropy_mean = tf.reduce_mean(cross_entropy)
+        loss = cross_entropy_mean + regularization
 
-        correct_prediction = tf.equal(tf.argmax(average_O, 1), tf.argmax(Y, 1))
+        correct_prediction = tf.equal(tf.round(average_O), tf.round(Y))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
     with tf.name_scope("Train") as scope:
         vars_A = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='attention_module')
         vars_L = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='learning_module')
         vars_R = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Loss')
+        
         # Minimizing Loss Function
         optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(
             loss, global_step=global_step, var_list=[vars_A, vars_L, vars_R])
@@ -127,10 +113,10 @@ def test(input_size, train_X, train_Y, test_X, test_Y, total_batch, index):
         variable_averages_op = variable_averages.apply(
             tf.trainable_variables(scope='test_model_{}'.format(index)))
         L_FC = tf.nn.relu(tf.matmul(X, L_W1) + L_b1)
-        O = tf.matmul(L_FC, L_W2) + L_b2
+        O = tf.nn.sigmoid(tf.matmul(L_FC, L_W2) + L_b2)
 
         average_L_FC = tf.nn.relu(tf.matmul(X, variable_averages.average(L_W1)) + variable_averages.average(L_b1))
-        average_O = tf.matmul(average_L_FC, variable_averages.average(L_W2)) + variable_averages.average(L_b2)
+        average_O = tf.nn.sigmoid(tf.matmul(average_L_FC, variable_averages.average(L_W2)) + variable_averages.average(L_b2))
 
     with tf.name_scope("test_Loss_{}".format(index)) as scope:
         regularizer = tf.keras.regularizers.L2(regularization_rate)
@@ -138,18 +124,17 @@ def test(input_size, train_X, train_Y, test_X, test_Y, total_batch, index):
 
         learning_rate = tf.train.exponential_decay(learning_rate_base, global_step, total_batch, learning_rate_decay)
 
-        cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=O, labels=tf.argmax(Y, 1))
+        cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=O, labels=Y)
         cross_entropy_mean = tf.reduce_mean(cross_entropy)
         loss = cross_entropy_mean + regularization
 
-        correct_prediction = tf.equal(tf.argmax(average_O, 1),
-                                      tf.argmax(Y, 1))
+        correct_prediction = tf.equal(tf.round(average_O), tf.round(Y))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
     with tf.name_scope("Train") as scope:
         vars_m = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='test_model_{}'.format(index))
         vars_l = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='test_Loss_{}'.format(index))
+        
         # Minimizing Loss Function
         optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(
             loss, global_step=global_step, var_list=[vars_m, vars_l])
@@ -164,7 +149,7 @@ def test(input_size, train_X, train_Y, test_X, test_Y, total_batch, index):
 
         for step in range(1, train_step + 1):
             xs, ys = Iterator.next_batch(batch_size)
-            sess.run(train_op, feed_dict={X: xs, Y: ys})
-        accuracy = sess.run(accuracy, feed_dict={X: test_X, Y: test_Y})
+            sess.run(train_op, feed_dict={X: xs, Y: np.expand_dims(ys, axis=1)})
+        accuracy = sess.run(accuracy, feed_dict={X: test_X, Y: np.expand_dims(test_Y, axis=1)})
 
     return accuracy
