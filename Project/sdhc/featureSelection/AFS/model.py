@@ -9,8 +9,9 @@ from utils import BatchCreate
 # parameter
 input_size = 889
 output_size = 1
-E_node = 32
-A_node = 2
+E_node = 128 # 32
+A_node = 32
+AO_node = 2
 set_seed = 42
 L_node = 500
 moving_average_decay = 0.99
@@ -37,16 +38,21 @@ def build(total_batch):
 
         E = tf.nn.tanh(tf.matmul(X, E_W) + E_b)
 
-        A_W = tf.Variable(tf.truncated_normal([input_size, E_node, A_node], stddev=0.1, seed=set_seed))
-        A_b = tf.Variable(tf.constant(0.1, shape=[input_size, A_node]))
+        A_W1 = tf.Variable(tf.truncated_normal([input_size, E_node, A_node], stddev=0.1, seed=set_seed))
+        A_b1 = tf.Variable(tf.constant(0.1, shape=[input_size, A_node]))
+        A_W2 = tf.Variable(tf.truncated_normal([input_size, A_node, AO_node], stddev=0.1, seed=set_seed))
+        A_b2 = tf.Variable(tf.constant(0.1, shape=[input_size, AO_node]))
 
-        A_W_unstack = tf.unstack(A_W, axis=0)
-        A_b_unstack = tf.unstack(A_b, axis=0)
+        A_W1_unstack = tf.unstack(A_W1, axis=0)
+        A_b1_unstack = tf.unstack(A_b1, axis=0)
+        A_W2_unstack = tf.unstack(A_W2, axis=0)
+        A_b2_unstack = tf.unstack(A_b2, axis=0)
 
         attention_out_list = []
         for i in range(input_size):
-            attention_FC = tf.matmul(E, A_W_unstack[i]) + A_b_unstack[i]
-            attention_out = tf.nn.softmax(attention_FC)
+            attention_FC1 = tf.matmul(E, A_W1_unstack[i]) + A_b1_unstack[i]
+            attention_FC2 = tf.matmul(attention_FC1, A_W2_unstack[i]) + A_b2_unstack[i]
+            attention_out = tf.nn.softmax(attention_FC2)
 
             attention_out = tf.expand_dims(attention_out[:,1], axis=1)
 
