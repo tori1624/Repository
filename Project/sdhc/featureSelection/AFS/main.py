@@ -144,8 +144,3 @@ recall = TP / (TP + FN)
 f1 = 2 * (precision * recall) / (precision + recall)
 auc = roc_auc_score(true, pred)
 print([accuracy, precision, recall, f1, auc])
-
-# feature selection
-attention_weight = A.mean(0)
-AFS_weight_rank = list(np.argsort(attention_weight))[::-1]
-# train_X.columns[AFS_weight_rank[0:20]]
