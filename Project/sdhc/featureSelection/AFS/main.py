@@ -26,14 +26,15 @@ else:
 # parameter
 input_size = 889
 output_size = 1
-E_node = 32
-A_node = 2
+E_node = 128 # 32
+A_node = 32
+AO_node = 2
 set_seed = 42
 L_node = 500
 moving_average_decay = 0.99
 
 regularization_rate = 0.0001
-learning_rate_base = 0.8
+learning_rate_base = 0.01
 learning_rate_decay = 0.99
 batch_size = 1024
 train_step = 2000
@@ -109,5 +110,42 @@ with tf.Session() as sess:
     tf.global_variables_initializer().run()
     print('== Get feature weight by using AFS ==')
     A = run_train(sess, scale_train_X, train_Y, scale_val_X, val_Y)
-print('== The Evaluation of AFS ==')
-ac_score_list = run_test(A, scale_train_X, train_Y, scale_test_X, true, total_batch)
+# print('== The Evaluation of AFS ==')
+# ac_score_list = run_test(A, scale_train_X, train_Y, scale_test_X, true, total_batch)
+
+# rf
+from sklearn.ensemble import RandomForestClassifier
+
+attention_weight = A.mean(0)
+AFS_weight_rank = list(np.argsort(attention_weight))[::-1]
+
+afs_train_X = train_X[train_X.columns[AFS_weight_rank[0:40]]]
+afs_test_X = test_X[test_X.columns[AFS_weight_rank[0:40]]]
+
+rf_model = RandomForestClassifier()
+rf_model.fit(afs_train_X, train_Y)
+
+# evaluation
+from sklearn.metrics import roc_auc_score
+
+cut_off = 0.5
+prob = rf_model.predict_proba(afs_test_X)
+prob = prob[:, 1]
+pred = np.floor(prob + (1 - cut_off))
+
+TN = np.sum(np.logical_and(pred == 0, true == 0))
+FN = np.sum(np.logical_and(pred == 0, true == 1))
+FP = np.sum(np.logical_and(pred == 1, true == 0))
+TP = np.sum(np.logical_and(pred == 1, true == 1))
+
+accuracy = (TN + TP) / (TN + TP + FN + FP)
+precision = TP / (TP + FP)
+recall = TP / (TP + FN)
+f1 = 2 * (precision * recall) / (precision + recall)
+auc = roc_auc_score(true, pred)
+print([accuracy, precision, recall, f1, auc])
+
+# feature selection
+attention_weight = A.mean(0)
+AFS_weight_rank = list(np.argsort(attention_weight))[::-1]
+# train_X.columns[AFS_weight_rank[0:20]]
