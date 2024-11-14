@@ -15,7 +15,7 @@ driver.get('https://www.jumpoline.com/')
 base_xpath = '//*[@id="content"]/div/div[1]/div[12]/div[3]/div/ul/'  # [Home] 스페셜 AD
 jumpo_len = len(driver.find_elements(By.XPATH, f'{base_xpath}li'))
 
-columns = ['ad_type', 'nocode', 't_mcate', 'region', 'floor', 'area', 'date', 'title', 'frc_name', 'premium',
+columns = ['ad_type', 'nocode', 't_mcate', 'region', 'floor', 'area', 'date', 'title', 'map_link', 'frc_name', 'premium',
            'frc_cost', 'mth_profit', 'mth_rate', 'premium_term', 'deposit', 'mth_fee', 'total_fee']
 jumpo_df = pd.DataFrame(columns=columns)  # 빈 데이터 프레임
 
@@ -33,6 +33,12 @@ for i in range(jumpo_len):
     date = driver.find_element(By.XPATH, f'{element_xpath}div[1]/div/span[1]').text[11:]  # 실매물 주인확인 날짜
     hits = driver.find_element(By.XPATH, f'{element_xpath}div[1]/div/span[2]').text[6:]  # 조회수
     title = driver.find_element(By.XPATH, f'{element_xpath}h4').text  # 가게 이름
+
+    # 지도 링크
+    try:
+        map_link = driver.find_element(By.XPATH, f'{element_xpath}a').get_attribute('href')
+    except:
+        map_link = ''
 
     # 가맹점 이름
     try:
@@ -61,8 +67,8 @@ for i in range(jumpo_len):
     ad_type = '홈화면 스페셜 광고'
 
     # 데이터 프레임 병합
-    tmp_list = [ad_type, nocode, t_mcate, region, floor, area, date, title, frc_name, premium, frc_cost, mth_profit,
-                mth_rate, premium_term, deposit, mth_fee, total_fee]
+    tmp_list = [ad_type, nocode, t_mcate, region, floor, area, date, title, map_link, frc_name, premium, frc_cost,
+                mth_profit, mth_rate, premium_term, deposit, mth_fee, total_fee]
     tmp_df = pd.DataFrame(data=[tmp_list], columns=columns)
     jumpo_df = pd.concat([jumpo_df, tmp_df])
 
