@@ -14,7 +14,7 @@ options = webdriver.ChromeOptions()
 options.add_argument('headless')
 
 # 업종별 크롤링
-columns = ['ad_type', 'nocode', 't_mcate', 'region', 'floor', 'area', 'date', 'title', 'frc_name', 'premium',
+columns = ['ad_type', 'nocode', 't_mcate', 'region', 'floor', 'area', 'date', 'title', 'map_link', 'frc_name', 'premium',
            'frc_cost', 'mth_profit', 'mth_rate', 'premium_term', 'deposit', 'mth_fee', 'total_fee']
 jumpo_df = pd.DataFrame(columns=columns)  # 빈 데이터 프레임
 
@@ -60,6 +60,12 @@ for i in range(8): #range(len(type_df)):
             hits = driver.find_element(By.XPATH, f'{element_xpath}div[1]/div/span[2]').text[6:]  # 조회수
             title = driver.find_element(By.XPATH, f'{element_xpath}h4').text  # 가게 이름
 
+            # 지도 링크
+            try:
+                map_link = driver.find_element(By.XPATH, f'{element_xpath}a').get_attribute('href')
+            except:
+                map_link = ''
+
             # 가맹점 이름
             try:
                 frc_name = driver.find_element(By.XPATH, f'{element_xpath}div[1]/a/span').text
@@ -97,7 +103,7 @@ for i in range(8): #range(len(type_df)):
                 ad_type = '업종별 일반 광고'
 
             # 데이터 프레임 병합
-            tmp_list = [ad_type, nocode, t_mcate, region, floor, area, date, title, frc_name, premium, frc_cost,
+            tmp_list = [ad_type, nocode, t_mcate, region, floor, area, date, title, map_link, frc_name, premium, frc_cost,
                         mth_profit, mth_rate, premium_term, deposit, mth_fee, total_fee]
             tmp_df = pd.DataFrame(data=[tmp_list], columns=columns)
 
