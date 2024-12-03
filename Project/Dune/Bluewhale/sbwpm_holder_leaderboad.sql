@@ -73,7 +73,7 @@ final as(
 select rank() over (order by a.current_balance desc) as rank
      , a.address
      , a.current_balance
-     , (a.aWeekAgo_balance - a.current_balance) as change7days
+     , (a.current_balance - a.aWeekAgo_balance) as change7days
      , (a.current_balance / b.supply) as supplyPercentage
 from final a, supply b
 order by a.current_balance desc;
