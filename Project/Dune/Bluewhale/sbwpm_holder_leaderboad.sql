@@ -8,6 +8,10 @@ with token_transfers as (
     from erc20_kaia.evt_Transfer as tranfers
     where contract_address = 0xf4546e1d3ad590a3c6d178d671b3bc0e8a81e27d  -- $sBWPM
 ),
+contract_address as (
+    select address as contract_address
+    from kaia.creation_traces
+),
 supply as (
     select sum(
         case 
@@ -76,4 +80,5 @@ select rank() over (order by a.current_balance desc) as rank
      , (a.current_balance - a.aWeekAgo_balance) as change7days
      , (a.current_balance / b.supply) as supplyPercentage
 from final a, supply b
+where a.address not in (select contract_address from contract_address)
 order by a.current_balance desc;
