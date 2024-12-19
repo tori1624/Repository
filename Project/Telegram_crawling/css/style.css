@@ -1,0 +1,43 @@
+body {
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  text-align: center;
+}
+
+#messages {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 20px;
+  gap: 20px;
+}
+
+.chat-container {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 10px;
+  width: 300px;
+  height: 300px;
+  min-width: 300px;
+  background-color: #f9f9f9;
+}
+
+.chat-container h2 {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+}
+
+.message {
+  border-bottom: 1px solid #eee;
+  padding: 5px 0;
+}
+
+.message:last-child {
+  border-bottom: none;
+}
+
+.message p {
+  margin: 5px 0;
+}
