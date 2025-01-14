@@ -1,29 +1,35 @@
 # Resume
 
 ## Interests
+* Data Analysis, Data Science, AI
 * ML Engineering, MLOps
-* Machine Learning, Deep Learning
 * Spatial AI/Statistics
 * Front-end
 * Block-chain
 
 
 ## Skills
-* **ML Engineer** : MLflow, Airflow, Docker
-* **ML/DL, Data Analysis** : Python (Tensorflow, Keras, Pytorch), R
+* **Data Analysis, Data Science** : Python (Tensorflow, Keras, PyTorch), R, Grafana, PowerBI
 * **Data Engineering** : PostgreSQL, Linux/Shell
+* **MLOps** : MLflow, Airflow, Docker, Kubernetes, ArgoCD
 * **CI/CD** : Git, Jenkins
-* **CSP** : AWS (EC2, RDS, S3, ECR)
+* **CSP** : AWS (EKS, EC2, RDS, S3, ECR, Fargate)
 
 
 ## Work Experience
+### Geron-X (2024.05 ~ )
+* Role : Data Analyst, Data Scientists, ML Engineer
+* 바이탈 데이터 품질 모니터링 대쉬보드 생성
+* ML 파이프라인 관리 및 고도화
+* 바이탈 데이터 기반 이상 탐지 모델 고도화
 
-### B2EN (2022.06 ~ )
-1. Project : 늘(NEUL) 서비스 데이터 플랫폼 구축 및 운영 (2022.06 ~ )
-* Role : ML Engineer, Data Scientists, Data Analyst
+
+### B2EN (2022.06 ~ 2024.04)
+1. Project : 늘(NEUL) 서비스 데이터 플랫폼 구축 및 운영 (2022.06 ~ 2024.04)
+* Role : Data Analyst, Data Scientists, ML Engineer
 * ML 파이프라인 구축 및 CI/CD 적용
 * 의료 데이터 기반 질병 예측 모델 개발 및 고도화
-* 요양병원 의료 데이터 표준화 및 ETL 파이프라인 구성
+* 의료 데이터 DB 구축 및 ETL 파이프라인 구성
 
 
 ### Openamte-on (2021.07 ~ 2022.05)
