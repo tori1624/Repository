@@ -51,13 +51,19 @@ for i in range(len(type_df)):
         while True: # 페이지를 끝까지 반복
             print(f"현재 페이지: {page}")
 
-            for k in range(jumpo_len[j]):
+            k = 0
+
+            while True: #for k in range(jumpo_len[j]):
 
                 # element 경로
                 element_xpath = os.path.join(base_xpath[j], f'li[{k+1}]/div/div/div[2]/')
 
                 # 기본 정보
-                nocode = driver.find_element(By.XPATH, f'{element_xpath}div[1]/span[1]/strong').text  # 매물번호
+                try:
+                    nocode = driver.find_element(By.XPATH, f'{element_xpath}div[1]/span[1]/strong').text  # 매물번호
+                    k += 1
+                except:
+                    break
                 t_mcate = driver.find_element(By.XPATH, f'{element_xpath}div[1]/span[2]/strong').text  # 업종
                 region = driver.find_element(By.XPATH, f'{element_xpath}div[1]/span[2]').text[:-len(t_mcate)]  # 지역
                 floor = driver.find_element(By.XPATH, f'{element_xpath}div[1]/span[3]/strong').text  # 층
@@ -117,17 +123,20 @@ for i in range(len(type_df)):
                 break
             else:
                 try:
-                    next_page = driver.find_element(By.XPATH, f'//*[@id="dvPaging"]/div/div/a[{page}]')
+                    if page > 1: # 페이지 꼬임 방지 (2페이지로 넘어갈수록 a[{page}]가 변함)
+                        driver.find_element(By.XPATH, f'//*[@id="dvPaging"]/div/div/a[2]/span').click()
+                        time.sleep(3)  # 페이지 로딩 대기
+
+                    next_page = driver.find_element(By.XPATH, f'//*[@id="dvPaging"]/div/div/a[{page}]/span')
                     next_page.click()
                     page += 1
                     time.sleep(3)  # 페이지 로딩 대기
                 except:
-                    #print(f"{type_df['type1'][i]}-{type_df['type2'][i]} - 총 {page} 페이지 완료")
-                    print(f"일반음식점-돈까스/우동 - 총 {page} 페이지 완료")
+                    print(f"{type_df['type1'][i]}-{type_df['type2'][i]} - 총 {page} 페이지 완료")
                     break  # 다음 버튼이 없으면 종료
 
-    #print(f"{type_df['type1'][i]}-{type_df['type2'][i]} 크롤링 완료")
-    print(f"일반음식점-돈까스/우동 크롤링 완료")
+    print(f"{type_df['type1'][i]}-{type_df['type2'][i]} 크롤링 완료")
+    driver.quit()
 
 # index 리셋
 jumpo_df.reset_index(drop=True, inplace=True)
