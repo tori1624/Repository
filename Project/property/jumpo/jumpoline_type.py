@@ -123,11 +123,19 @@ for i in range(len(type_df)):
                 break
             else:
                 try:
-                    if page > 1: # 페이지 꼬임 방지 (2페이지로 넘어갈수록 a[{page}]가 변함)
+                    idx = page
+
+                    if 1 < page < 11: # 페이지 꼬임 방지 (2페이지로 넘어갈수록 a[{page}]가 변함)
                         driver.find_element(By.XPATH, f'//*[@id="dvPaging"]/div/div/a[2]/span').click()
                         time.sleep(3)  # 페이지 로딩 대기
+                        idx = page
+                    elif page >= 11:
+                        idx = '12' if str(page)[-1] == '0' else str(int(str(page)[-1])+2)
 
-                    next_page = driver.find_element(By.XPATH, f'//*[@id="dvPaging"]/div/div/a[{page}]/span')
+                    next_page = driver.find_element(By.XPATH, f'//*[@id="dvPaging"]/div/div/a[{idx}]')
+                    if '끝' in next_page.text:
+                        print(f"{type_df['type1'][i]}-{type_df['type2'][i]} - 총 {page} 페이지 완료")
+                        break
                     next_page.click()
                     page += 1
                     time.sleep(3)  # 페이지 로딩 대기
