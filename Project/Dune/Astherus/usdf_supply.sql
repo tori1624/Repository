@@ -5,7 +5,7 @@ with usdf_supply as (
         (select evt_block_time
               , cast(value as double)/1e18 as amount
         from erc20_bnb.evt_transfer
-        where contract_address = 0x5A110fC00474038f6c02E89C707D638602EA44B5 --usdf CA
+        where contract_address = 0x5A110fC00474038f6c02E89C707D638602EA44B5 -- usdf CA
         and "from" = 0x0000000000000000000000000000000000000000
         
         union all 
@@ -25,7 +25,7 @@ asusdf_supply as (
         (select evt_block_time
               , cast(value as double)/1e18 as amount
         from erc20_bnb.evt_transfer
-        where contract_address = 0x917AF46B3C3c6e1Bb7286B9F59637Fb7C65851Fb --asusdf CA
+        where contract_address = 0x917AF46B3C3c6e1Bb7286B9F59637Fb7C65851Fb -- asusdf CA
         and "from" = 0x0000000000000000000000000000000000000000
         
         union all 
