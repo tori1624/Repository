@@ -15,7 +15,7 @@ options.add_argument('headless')
 
 # 업종별 크롤링
 columns = ['ad_type', 'nocode', 't_mcate', 'region', 'floor', 'area', 'date', 'title', 'map_link', 'frc_name', 'premium',
-           'frc_cost', 'mth_profit', 'mth_rate', 'premium_term', 'deposit', 'mth_fee', 'total_fee']
+           'frc_cost', 'mth_profit', 'mth_rate', 'premium_term', 'deposit', 'mth_fee', 'total_fee', 'contents_link']
 jumpo_df = pd.DataFrame(columns=columns)  # 빈 데이터 프레임
 
 for i in range(len(type_df)):
@@ -27,7 +27,7 @@ for i in range(len(type_df)):
     # 크롬 드라이버 및 웹페이지 실행
     driver = webdriver.Chrome(options=options)
     driver.get(f'https://www.jumpoline.com/_jumpo/jumpoListMaster.asp?mcode={mcode}&scode={scode}')
-    time.sleep(3)
+    time.sleep(5)
 
     # 프리미엄, 일반 광고 크롤링 경로 설정
     assum_len1 = len(driver.find_elements(By.XPATH, f'//*[@id="marketChargeListTable"]/div/ul/li'))
@@ -111,9 +111,13 @@ for i in range(len(type_df)):
                 # 크롤링 source
                 ad_type = ['업종별 프리미엄 광고', '업종별 일반 광고'][j]
 
+                # 매물 link
+                jumpo_id = driver.find_element(By.XPATH, f'{element_xpath}h4').get_attribute('onclick').split(',')[1].strip("'\"")
+                contents_link = f'https://www.jumpoline.com/_jumpo/jumpo_view.asp?webjofrsid={jumpo_id}'
+
                 # 데이터 프레임 병합
                 tmp_list = [ad_type, nocode, t_mcate, region, floor, area, date, title, map_link, frc_name, premium, frc_cost,
-                            mth_profit, mth_rate, premium_term, deposit, mth_fee, total_fee]
+                            mth_profit, mth_rate, premium_term, deposit, mth_fee, total_fee, contents_link]
                 tmp_df = pd.DataFrame(data=[tmp_list], columns=columns)
 
                 jumpo_df = pd.concat([jumpo_df, tmp_df])
