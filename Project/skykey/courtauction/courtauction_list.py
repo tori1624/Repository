@@ -24,14 +24,10 @@ options.add_argument('headless')
 # 크롬 드라이버 및 웹페이지 실행
 driver = webdriver.Chrome(options=options)
 driver.get('https://www.courtauction.go.kr/pgj/index.on')
-time.sleep(2)
 
 # 물건 상세 검색 이동
 driver.find_element(By.XPATH, '//*[@id="mf_wq_uuid_260"]').click()
-
-# 법원 전체 지정
-setCourt = Select(driver.find_element(By.ID, 'mf_wfm_mainFrame_sbx_rletCortOfc'))
-setCourt.select_by_visible_text('전체')
+time.sleep(random.uniform(1, 1.5))
 
 # 용도 목록 가져오기
 use_elements = driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_sbx_rletLclLst"]/option')
@@ -40,22 +36,22 @@ use_list = list(map(lambda x: x.text, use_elements))[1:]
 # 경매 정보 크롤링
 for use in use_list:
 
+    # 법원 전체 지정
+    setCourt = Select(driver.find_element(By.ID, 'mf_wfm_mainFrame_sbx_rletCortOfc'))
+    setCourt.select_by_visible_text('전체')
+
     # 용도 지정
     setUse = Select(driver.find_element(By.ID, 'mf_wfm_mainFrame_sbx_rletLclLst'))
     setUse.select_by_visible_text(use)
     driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_gdsDtlSrch"]').click()
+    time.sleep(random.uniform(1, 1.5))
 
     # 용도별 마지막 페이지 추출
-    try:
-        driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_pgl_gdsDtlSrchPage_nextPage_btn"]/button').click()
-        time.sleep(2)
-    except:
-        continue
-
+    driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_pgl_gdsDtlSrchPage_nextPage_btn"]/button').click()
+    time.sleep(random.uniform(1, 1.5))
     last_page = int(driver.find_elements(By.XPATH, '//ul[@class="w2pageList_ul"]/li')[-3].text)
-
     driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_pgl_gdsDtlSrchPage_prevPage_btn"]/button').click()
-    time.sleep(2)
+    time.sleep(random.uniform(1, 1.5))
 
     # 용도별 물건 및 정보 가져오기
     page = 1
@@ -120,15 +116,15 @@ for use in use_list:
         elif page % 10 == 0:  # 10 단위 페이지일 경우, 다음 페이지 목록으로 이동
             driver.find_element(By.XPATH, '//*[@id="mf_wfm_mainFrame_pgl_gdsDtlSrchPage_next_btn"]/button').click()
             page += 1
-            time.sleep(random.uniform(1, 2))
+            time.sleep(random.uniform(0.5, 1))
         else:  # 그 외에는 다음 페이지로 이동
             page += 1
             driver.find_elements(By.XPATH, f'//*[@id="mf_wfm_mainFrame_pgl_gdsDtlSrchPage_page_{page}"]')[0].click()
-            time.sleep(random.uniform(1, 2))
+            time.sleep(random.uniform(0.5, 1))
 
     # 물건 상세 검색으로 돌아가기
     driver.find_elements(By.XPATH, '//*[@id="mf_wfm_mainFrame_btn_prevPage"]')[0].click()
-    time.sleep(10)
+    time.sleep(5)
 
 driver.quit()
 
